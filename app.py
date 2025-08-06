@@ -320,8 +320,7 @@ with single_tab:
                 with st.expander("Meta (preview)", expanded=True):
                     st.write(meta)
                 with st.expander("Signposted content (preview)", expanded=True):
-                    st.text("
-".join(lines))
+                    st.text("\n".join(lines))
                 if do_doc:
                     out_bytes = build_docx(tpl_file.read(), meta, lines)
                     st.download_button(
