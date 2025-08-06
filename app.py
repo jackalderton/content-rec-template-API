@@ -302,78 +302,77 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600&display=swap');
 
-/* GLOBAL RESET */
+/* Reset and base font */
 html, body, [class*="css"] {
-    font-family: 'Manrope', sans-serif !important;
-    background-color: #f1f5f9 !important;
-    color: #1f2937 !important;
+    font-family: 'Manrope', sans-serif;
+    background-color: #f8fafc;
+    color: #1f2937;
+    font-size: 16px;
+    line-height: 1.5;
 }
 
-/* MAIN APP */
+/* App container */
 .stApp {
-    background-color: #f1f5f9;
+    background-color: #f8fafc;
     padding: 2rem;
 }
 
-/* HEADINGS */
+/* Headings */
 h1, h2, h3, h4, h5, h6 {
-    color: #111827 !important;
+    color: #0f172a;
     font-weight: 600;
 }
 
-/* SIDEBAR */
+/* Sidebar */
 .stSidebar {
     background-color: #ffffff !important;
-    padding: 2rem 1rem;
-    border-right: 1px solid #e5e7eb;
-    box-shadow: 1px 0 3px rgba(0,0,0,0.02);
+    padding: 1.5rem 1rem !important;
+    border-right: 1px solid #e2e8f0;
 }
 
-/* SIDEBAR WIDGETS */
+/* Sidebar widgets */
 .stSidebar input,
 .stSidebar textarea,
 .stSidebar select {
     background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
     color: #1f2937 !important;
-    border: 1px solid #d1d5db !important;
     border-radius: 6px !important;
     padding: 0.5rem !important;
 }
 
-/* INPUTS */
-input[type="text"],
-textarea {
+/* Fix for text inputs */
+input[type="text"], textarea {
     background-color: #ffffff !important;
     color: #1f2937 !important;
     border: 1px solid #cbd5e1 !important;
     border-radius: 6px !important;
-    padding: 0.55rem 0.75rem !important;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04) !important;
+    padding: 0.6rem 0.75rem !important;
     font-size: 1rem;
-}
-
-/* OVERRIDE STREAMLIT'S WRAPPERS AROUND INPUTS */
-.stTextInput > div, .stTextInput > div > div,
-.stTextArea > div, .stTextArea > div > div {
-    background: transparent !important;
-    border: none !important;
     box-shadow: none !important;
+    margin-top: 0.25rem;
 }
 
-/* PLACEHOLDER */
+/* Remove nested input wrappers that break layout */
+.stTextInput > div:first-child,
+.stTextInput > div:first-child > div {
+    all: unset !important;
+}
+
+/* Placeholder styling */
 input::placeholder,
 textarea::placeholder {
-    color: #9ca3af !important;
+    color: #94a3b8;
 }
 
-/* BUTTONS */
+/* Buttons */
 .stButton > button,
 .stDownloadButton > button {
-    background-color: #2563eb;
-    color: #ffffff;
+    background-color: #3b82f6;
+    color: white;
     border: none;
     border-radius: 6px;
-    padding: 0.5rem 1.25rem;
+    padding: 0.6rem 1.25rem;
     font-weight: 600;
     font-size: 0.95rem;
     transition: background-color 0.2s ease;
@@ -381,15 +380,15 @@ textarea::placeholder {
 
 .stButton > button:hover,
 .stDownloadButton > button:hover {
-    background-color: #1d4ed8;
+    background-color: #2563eb;
 }
 
-/* TABS */
+/* Tabs */
 .stTabs [role="tab"] {
     background-color: #e2e8f0;
-    color: #374151;
+    color: #1e293b;
     border-radius: 6px 6px 0 0;
-    padding: 0.6rem 1.25rem;
+    padding: 0.65rem 1.25rem;
     margin-right: 0.5rem;
     font-weight: 500;
     font-size: 0.95rem;
@@ -401,46 +400,41 @@ textarea::placeholder {
     font-weight: 600;
 }
 
-/* TAB PANEL CONTAINERS */
+/* Tab content area */
 .st-af, .st-ag, .st-ah, .st-ai, .st-aj,
 .st-ak, .st-al, .st-am, .st-an, .st-ao,
 .st-ap, .st-aq, .st-ar {
-    padding: 1.5rem !important;
     background-color: #ffffff !important;
     border-radius: 0 0 8px 8px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    padding: 1.5rem !important;
 }
 
-/* CONTAINERS (expander, dataframes, etc.) */
-.stExpander,
-.st-cg, .st-c1,
-.stDataFrame {
+/* Boxes like expanders and tables */
+.stExpander, .stDataFrame, .st-cg, .st-c1 {
     background-color: #ffffff !important;
     border-radius: 8px !important;
     padding: 1rem !important;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* Table text */
+.stDataFrame thead, .stDataFrame tbody {
     color: #1f2937 !important;
 }
 
-/* TABLE TEXT */
-.stDataFrame thead,
-.stDataFrame tbody {
-    color: #1f2937 !important;
-}
-
-/* LABELS & CAPTIONS */
-.stCaption,
-.stExpanderHeader {
-    color: #6b7280 !important;
+/* Labels, captions, help text */
+.stCaption, .stExpanderHeader {
+    color: #64748b !important;
     font-size: 0.875rem;
 }
 
-/* DIVIDER */
+/* Divider */
 .stDivider {
-    border-color: #e5e7eb !important;
+    border-color: #e2e8f0 !important;
 }
 
-/* SPECIFIC HEADINGS FIX */
+/* Specific heading container override */
 .st-emotion-cache-1gv3huu.eczjsme18 h2,
 .st-emotion-cache-1gv3huu.eczjsme18 h3 {
     color: #000000 !important;
