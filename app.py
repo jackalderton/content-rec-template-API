@@ -298,6 +298,68 @@ def process_url(
 # -------------------------
 st.set_page_config(page_title="Explore Template Autofill", page_icon="364704cc-6899-4fc3-b37c-29dbfd0a4f3f.png", layout="wide")
 
+st.markdown("""
+<style>
+/* Main title styling */
+.st-emotion-cache-1j0k826 {
+    text-align: center;
+    color: #4A90E2;
+    font-size: 3em;
+    padding-bottom: 0.5em;
+    border-bottom: 2px solid #4A90E2;
+}
+
+/* Sidebar styling */
+[data-testid="stSidebar"] {
+    background-color: #1a1e24;
+    border-right: 1px solid #4A90E2;
+}
+
+/* Expander styling */
+.streamlit-expanderHeader {
+    background-color: #363945;
+    border-radius: 8px;
+    padding: 10px 15px;
+    margin-bottom: 10px;
+    border: none;
+    font-weight: bold;
+    color: #E0E0E0;
+}
+
+/* Button styling */
+.stButton>button {
+    width: 100%;
+    background-color: #323640;
+    color: #E0E0E0;
+    border: 1px solid #4A90E2;
+    border-radius: 8px;
+    padding: 10px;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.stButton>button:hover {
+    background-color: #4A90E2;
+    color: white;
+    border-color: white;
+}
+
+/* Tab styling */
+.st-emotion-cache-1cypcdb {
+    background-color: #323640;
+}
+
+.st-emotion-cache-1cypcdb .st-emotion-cache-1q8867a {
+    color: #E0E0E0;
+}
+
+.st-emotion-cache-1cypcdb .st-emotion-cache-1q8867a[data-selected="true"] {
+    color: #4A90E2;
+    border-bottom: 3px solid #4A90E2;
+}
+
+</style>
+""", unsafe_allow_html=True
+
 st.title("Explore Template Autofill (Web)")
 
 with st.sidebar:
