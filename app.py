@@ -60,6 +60,7 @@ def fetch_html(url: str) -> tuple[str, str]:
 def normalise_keep_newlines(s: str) -> str:
     s = s.replace("\r\n", "\n").replace("\r", "\n").replace("\xa0", " ")
     s = re.sub(r"[ \t]+", " ", s)
+    # keep explicit newlines; trim spaces around them
     s = re.sub(r"[ \t]*\n[ \t]*", "\n", s)
     return s
 
@@ -69,6 +70,7 @@ def annotate_anchor_text(a: Tag, annotate_links: bool) -> str:
     return f"{text} (→ {href})" if (annotate_links and href) else text
 
 def extract_text_preserve_breaks(node: Tag | NavigableString, annotate_links: bool) -> str:
+    """Extract visible text; convert <br> to '\n'; handle anchors as one unit."""
     if isinstance(node, NavigableString):
         return str(node)
     parts = []
@@ -85,41 +87,57 @@ def extract_text_preserve_breaks(node: Tag | NavigableString, annotate_links: bo
     return "".join(parts)
 
 def extract_signposted_lines_from_body(body: Tag, annotate_links: bool) -> list[str]:
+    """
+    Emit ONLY:
+      - <h1> … <h6> lines
+      - <p> lines
+    Lists flattened to <p>. Critically, <p> is split on <br> and blank lines preserved
+    (blank <p> emitted as '<p>' with no text).
+    """
     lines: list[str] = []
 
     def emit_lines(tag_name: str, text: str):
         text = normalise_keep_newlines(text)
-        segments = text.split("\n")
+        segments = text.split("\n")  # preserve blanks
         for seg in segments:
             seg_stripped = seg.strip()
             if seg_stripped:
                 lines.append(f"<{tag_name}> {seg_stripped}")
             else:
                 if tag_name == "p":
-                    lines.append("<p>")
+                    lines.append("<p>")  # explicit blank line
+                # we typically don't emit blank headings
 
     def handle(tag: Tag):
         name = tag.name
         if name in ALWAYS_STRIP:
             return
+
         if name in {"h1","h2","h3","h4","h5","h6"}:
             txt = extract_text_preserve_breaks(tag, annotate_links)
             if txt.strip():
                 emit_lines(name, txt)
+
         elif name == "p":
             txt = extract_text_preserve_breaks(tag, annotate_links)
-            if txt.strip() or "\n" in txt:
+            if txt.strip() or "\n" in txt:  # allow blank lines from <br><br>
                 emit_lines("p", txt)
+
         elif name in {"ul", "ol"}:
             for li in tag.find_all("li", recursive=False):
                 txt = extract_text_preserve_breaks(li, annotate_links)
                 if txt.strip():
                     emit_lines("p", txt)
+                # one nested level
                 for sub in li.find_all(["ul", "ol"], recursive=False):
                     for sub_li in sub.find_all("li", recursive=False):
                         sub_txt = extract_text_preserve_breaks(sub_li, annotate_links)
                         if sub_txt.strip():
                             emit_lines("p", sub_txt)
+
+        # ignore everything else
+
+        # Recurse to capture nested text blocks
         for child in tag.children:
             if isinstance(child, Tag):
                 handle(child)
@@ -128,6 +146,7 @@ def extract_signposted_lines_from_body(body: Tag, annotate_links: bool) -> list[
         if isinstance(child, Tag):
             handle(child)
 
+    # Deduplicate trivial adjacent repeats
     deduped, prev = [], None
     for ln in lines:
         if ln != prev:
@@ -158,6 +177,7 @@ def iter_paragraphs_and_tables(doc: Document):
                     yield p
 
 def replace_placeholders_safe(doc: Document, mapping: dict[str, str]):
+    """Replace placeholders safely: longer keys first to avoid nested/partial clashes."""
     keys = sorted(mapping.keys(), key=len, reverse=True)
     for p in iter_paragraphs_and_tables(doc):
         t = p.text or ""
@@ -168,6 +188,7 @@ def replace_placeholders_safe(doc: Document, mapping: dict[str, str]):
                 t = t.replace(k, v)
                 replaced = True
         if replaced:
+            # collapse runs (ok for placeholders)
             for r in list(p.runs):
                 r.clear()
             p.clear()
@@ -194,6 +215,7 @@ def replace_placeholder_with_lines(doc: Document, placeholder: str, lines: list[
     if not lines:
         target.clear()
         return
+    # first line replaces the placeholder, rest are new paragraphs after
     target.clear()
     target.add_run(lines[0])
     anchor = target
@@ -203,6 +225,8 @@ def replace_placeholder_with_lines(doc: Document, placeholder: str, lines: list[
 def build_docx(template_bytes: bytes, meta: dict, lines: list[str]) -> bytes:
     bio = io.BytesIO(template_bytes)
     doc = Document(bio)
+
+    # Support both bracketed and bare DESCRIPTION tokens
     replace_placeholders_safe(doc, {
         "[PAGE]": meta["page"],
         "[DATE]": meta["date"],
@@ -213,7 +237,9 @@ def build_docx(template_bytes: bytes, meta: dict, lines: list[str]) -> bytes:
         "DESCRIPTION": meta["description"],
         "[DESCRIPTION LENGTH]": str(meta["description_len"]),
     })
+
     replace_placeholder_with_lines(doc, "[PAGE BODY CONTENT]", lines)
+
     out = io.BytesIO()
     doc.save(out)
     out.seek(0)
@@ -226,16 +252,17 @@ def process_url(
     url: str,
     exclude_selectors: list[str],
     annotate_links: bool = False,
-    remove_before_h1: bool = False,
 ):
     final_url, html = fetch_html(url)
     soup = BeautifulSoup(html, "lxml")
 
+    # global strip
     for el in soup.find_all(list(ALWAYS_STRIP)):
         el.decompose()
 
     body = soup.body or soup
 
+    # exclude universal blocks
     for sel in exclude_selectors:
         try:
             for el in body.select(sel):
@@ -243,23 +270,16 @@ def process_url(
         except Exception:
             pass
 
-    if remove_before_h1:
-        first_h1 = body.find("h1")
-        if first_h1:
-            for prev in list(first_h1.previous_elements):
-                try:
-                    if isinstance(prev, Tag):
-                        prev.decompose()
-                except Exception:
-                    continue
-
+    # extract signposted lines
     lines = extract_signposted_lines_from_body(body, annotate_links=annotate_links)
 
+    # meta
     head = soup.head or soup
     title = head.title.string.strip() if (head and head.title and head.title.string) else "N/A"
     meta_el = head.find("meta", attrs={"name": "description"}) if head else None
     description = meta_el.get("content").strip() if (meta_el and meta_el.get("content")) else "N/A"
 
+    # page name: prefer H1
     page_name = first_h1_text(soup) or fallback_page_name_from_url(final_url)
 
     meta = {
@@ -272,3 +292,187 @@ def process_url(
         "description_len": len(description) if description != "N/A" else 0,
     }
     return meta, lines
+
+# -------------------------
+# STREAMLIT APP
+# -------------------------
+st.set_page_config(page_title="Content Rec Template Tool", page_icon="JAFavicon.png", layout="wide")
+
+st.markdown("""
+<style>
+/* Import a Google Font */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
+
+body, h1, h2, h3, p {
+    font-family: 'Montserrat', sans-serif;
+}
+
+/* Main title styling */
+.st-emotion-cache-1j0k826 {
+    text-align: center;
+    color: #4A90E2;
+    font-size: 3em;
+    padding-bottom: 0.5em;
+    border-bottom: 2px solid #4A90E2;
+    font-family: 'Montserrat', sans-serif;
+}
+
+/* Sidebar styling */
+[data-testid="stSidebar"] {
+    background-color: #1a1e24;
+    border-right: 1px solid #4A90E2;
+}
+
+/* Expander styling */
+.streamlit-expanderHeader {
+    background-color: #363945;
+    border-radius: 8px;
+    padding: 10px 15px;
+    margin-bottom: 10px;
+    border: none;
+    font-weight: bold;
+    color: #E0E0E0;
+    font-family: 'Montserrat', sans-serif;
+}
+
+/* Button styling */
+.stButton>button {
+    width: 100%;
+    background-color: #323640;
+    color: #E0E0E0;
+    border: 1px solid #4A90E2;
+    border-radius: 8px;
+    padding: 10px;
+    transition: background-color 0.3s, color 0.3s;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.stButton>button:hover {
+    background-color: #4A90E2;
+    color: white;
+    border-color: white;
+}
+
+/* Tab styling */
+.st-emotion-cache-1cypcdb {
+    background-color: #323640;
+}
+
+.st-emotion-cache-1cypcdb .st-emotion-cache-1q8867a {
+    color: #E0E0E0;
+}
+
+.st-emotion-cache-1cypcdb .st-emotion-cache-1q8867a[data-selected="true"] {
+    color: #4A90E2;
+    border-bottom: 3px solid #4A90E2;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+st.title("Content Rec Template Generation Tool")
+
+with st.sidebar:
+    st.header("Template & Options")
+    tpl_file = st.file_uploader("Upload Template as .DOCX file", type=["docx"])
+    st.caption("This should be your blank template with placeholders (e.g., [PAGE], [DATE], [PAGE BODY CONTENT], etc.).")
+
+    st.divider()
+    st.subheader("Need a template?")
+    with open("blank_template.docx", "rb") as file:
+        st.download_button(
+            label="Download a Blank Template",
+            data=file,
+            file_name="blank_template.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+    st.caption("Once downloaded, you'll still need to upload this above, but this version is a decent starting point.")
+
+    st.divider()
+    st.subheader("Exclude Selectors")
+    exclude_txt = st.text_area(
+        "Comma-separated CSS selectors to remove from <body>",
+        value=", ".join(DEFAULT_EXCLUDE),
+        height=120
+    )
+    exclude_selectors = [s.strip() for s in exclude_txt.split(",") if s.strip()]
+
+    st.subheader("Link formatting")
+    annotate_links = st.toggle("Append (→ URL) after anchor text", value=False)
+
+    st.caption("Timezone fixed to Europe/London; dates in DD/MM/YYYY.")
+
+tab1, tab2 = st.tabs(["Single URL", "Batch (CSV)"])
+
+with tab1:
+    st.subheader("Single page")
+    url = st.text_input("URL", value="https://www.example.com")
+    col_a, col_b = st.columns([1,1])
+    with col_a:
+        do_preview = st.button("Extract preview")
+    with col_b:
+        do_doc = st.button("Generate DOCX")
+
+    if do_preview or do_doc:
+        if not tpl_file and do_doc:
+            st.error("Please upload your Rec Template.docx in the sidebar first.")
+        else:
+            try:
+                meta, lines = process_url(url, exclude_selectors, annotate_links=annotate_links)
+                st.success("Extracted successfully.")
+                with st.expander("Meta (preview)", expanded=True):
+                    st.write(meta)
+                with st.expander("Signposted content (preview)", expanded=True):
+                    st.text("\n".join(lines))
+
+                if do_doc:
+                    out_bytes = build_docx(tpl_file.read(), meta, lines)
+                    st.download_button(
+                        "Download DOCX",
+                        data=out_bytes,
+                        file_name=f"{meta['page']} - Content Recommendations.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    )
+            except Exception as e:
+                st.exception(e)
+
+with tab2:
+    st.subheader("Batch process CSV")
+    st.caption("Upload a CSV with a header row; required column: url. Optional: out_name.")
+    batch_file = st.file_uploader("CSV file", type=["csv"], key="csv")
+    if st.button("Run batch"):
+        if not tpl_file:
+            st.error("Please upload your Rec Template.docx in the sidebar first.")
+        elif not batch_file:
+            st.error("Please upload a CSV.")
+        else:
+            tpl_bytes = tpl_file.read()
+            rows = list(csv.DictReader(io.StringIO(batch_file.getvalue().decode("utf-8"))))
+            if not rows:
+                st.error("CSV appears empty.")
+            elif "url" not in rows[0]:
+                st.error("CSV must include a 'url' column.")
+            else:
+                memzip = io.BytesIO()
+                zf = zipfile.ZipFile(memzip, "w", zipfile.ZIP_DEFLATED)
+                results = []
+                for i, row in enumerate(rows, 1):
+                    u = row["url"].strip()
+                    try:
+                        meta, lines = process_url(u, exclude_selectors, annotate_links=annotate_links)
+                        out_name = (row.get("out_name") or f"{meta['page']} - Content Recommendations").strip()
+                        out_bytes = build_docx(tpl_bytes, meta, lines)
+                        zf.writestr(f"{out_name}.docx", out_bytes)
+                        results.append({"url": u, "status": "ok", "file": f"{out_name}.docx"})
+                    except Exception as e:
+                        results.append({"url": u, "status": f"error: {e}", "file": ""})
+                zf.close()
+                memzip.seek(0)
+                st.success("Batch complete.")
+                st.dataframe(results)
+                st.download_button(
+                    "Download ZIP",
+                    data=memzip.read(),
+                    file_name="content_recommendations.zip",
+                    mime="application/zip",
+                )
