@@ -304,15 +304,15 @@ st.markdown("""
 
 /* GLOBAL RESET */
 html, body, [class*="css"] {
-    font-family: 'Manrope', sans-serif;
-    background-color: #f9fafb !important;
+    font-family: 'Manrope', sans-serif !important;
+    background-color: #f1f5f9 !important;
     color: #1f2937 !important;
 }
 
-/* MAIN APP WRAPPER */
+/* MAIN APP */
 .stApp {
-    background-color: #f9fafb;
-    padding: 1rem;
+    background-color: #f1f5f9;
+    padding: 2rem;
 }
 
 /* HEADINGS */
@@ -324,34 +324,35 @@ h1, h2, h3, h4, h5, h6 {
 /* SIDEBAR */
 .stSidebar {
     background-color: #ffffff !important;
-    padding: 1.5rem 1rem;
+    padding: 2rem 1rem;
     border-right: 1px solid #e5e7eb;
-    box-shadow: 1px 0 2px rgba(0,0,0,0.03);
+    box-shadow: 1px 0 3px rgba(0,0,0,0.02);
 }
 
 /* SIDEBAR WIDGETS */
 .stSidebar input,
 .stSidebar textarea,
 .stSidebar select {
-    background-color: #f3f4f6 !important;
+    background-color: #ffffff !important;
     color: #1f2937 !important;
     border: 1px solid #d1d5db !important;
-    border-radius: 6px;
-    padding: 0.5rem;
+    border-radius: 6px !important;
+    padding: 0.5rem !important;
 }
 
-/* TEXT INPUTS + TEXTAREAS */
+/* INPUTS */
 input[type="text"],
 textarea {
-    background-color: #f3f4f6 !important;
-    color: #111827 !important;
-    border: 1px solid #d1d5db !important;
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border: 1px solid #cbd5e1 !important;
     border-radius: 6px !important;
-    padding: 0.5rem 0.75rem !important;
-    box-shadow: none !important;
+    padding: 0.55rem 0.75rem !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04) !important;
+    font-size: 1rem;
 }
 
-/* REMOVE STREAMLIT WRAPPER STYLES ON INPUTS */
+/* OVERRIDE STREAMLIT'S WRAPPERS AROUND INPUTS */
 .stTextInput > div, .stTextInput > div > div,
 .stTextArea > div, .stTextArea > div > div {
     background: transparent !important;
@@ -359,7 +360,7 @@ textarea {
     box-shadow: none !important;
 }
 
-/* PLACEHOLDER TEXT */
+/* PLACEHOLDER */
 input::placeholder,
 textarea::placeholder {
     color: #9ca3af !important;
@@ -368,28 +369,30 @@ textarea::placeholder {
 /* BUTTONS */
 .stButton > button,
 .stDownloadButton > button {
-    background-color: #3b82f6;
-    color: white;
+    background-color: #2563eb;
+    color: #ffffff;
     border: none;
     border-radius: 6px;
     padding: 0.5rem 1.25rem;
     font-weight: 600;
-    transition: background-color 0.2s ease-in-out;
+    font-size: 0.95rem;
+    transition: background-color 0.2s ease;
 }
 
 .stButton > button:hover,
 .stDownloadButton > button:hover {
-    background-color: #2563eb;
+    background-color: #1d4ed8;
 }
 
 /* TABS */
 .stTabs [role="tab"] {
-    background-color: #e5e7eb;
+    background-color: #e2e8f0;
     color: #374151;
     border-radius: 6px 6px 0 0;
-    padding: 0.5rem 1rem;
+    padding: 0.6rem 1.25rem;
     margin-right: 0.5rem;
     font-weight: 500;
+    font-size: 0.95rem;
 }
 
 .stTabs [role="tab"][aria-selected="true"] {
@@ -398,46 +401,46 @@ textarea::placeholder {
     font-weight: 600;
 }
 
-/* TAB PANELS */
+/* TAB PANEL CONTAINERS */
 .st-af, .st-ag, .st-ah, .st-ai, .st-aj,
 .st-ak, .st-al, .st-am, .st-an, .st-ao,
 .st-ap, .st-aq, .st-ar {
-    padding: 1.25rem !important;
+    padding: 1.5rem !important;
     background-color: #ffffff !important;
     border-radius: 0 0 8px 8px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
-/* EXPANDERS, DATAFRAMES, CONTAINERS */
+/* CONTAINERS (expander, dataframes, etc.) */
 .stExpander,
 .st-cg, .st-c1,
 .stDataFrame {
     background-color: #ffffff !important;
-    border-radius: 8px;
-    padding: 1rem;
+    border-radius: 8px !important;
+    padding: 1rem !important;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     color: #1f2937 !important;
 }
 
-/* TABLE HEADERS + BODY TEXT */
+/* TABLE TEXT */
 .stDataFrame thead,
 .stDataFrame tbody {
     color: #1f2937 !important;
 }
 
-/* LABELS + CAPTIONS */
+/* LABELS & CAPTIONS */
 .stCaption,
 .stExpanderHeader {
     color: #6b7280 !important;
     font-size: 0.875rem;
 }
 
-/* DIVIDERS */
+/* DIVIDER */
 .stDivider {
-    border-color: #e5e7eb;
+    border-color: #e5e7eb !important;
 }
 
-/* ENSURE CERTAIN H2/H3s ARE BLACK */
+/* SPECIFIC HEADINGS FIX */
 .st-emotion-cache-1gv3huu.eczjsme18 h2,
 .st-emotion-cache-1gv3huu.eczjsme18 h3 {
     color: #000000 !important;
