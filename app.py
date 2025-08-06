@@ -275,13 +275,15 @@ def process_url(
     if remove_before_h1:
         first_h1 = body.find("h1")
         if first_h1 is not None:
-            wrapper = soup.new_tag("div")
-            elem = first_h1
-            while elem:
-                next_elem = elem.next_sibling
-                wrapper.append(elem.extract())
-                elem = next_elem
-            lines = extract_signposted_lines_from_body(wrapper, annotate_links=annotate_links)
+    wrapper = soup.new_tag("div")
+    include = False
+    for el in body.descendants:
+        if isinstance(el, Tag):
+            if el == first_h1:
+                include = True
+            if include:
+                wrapper.append(el.extract())
+    lines = extract_signposted_lines_from_body(wrapper, annotate_links=annotate_links)
         else:
             lines = extract_signposted_lines_from_body(body, annotate_links=annotate_links)
     else:
