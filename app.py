@@ -300,58 +300,56 @@ st.set_page_config(page_title="Explore Template Autofill", page_icon="364704cc-6
 
 st.markdown("""
 <style>
-/* Import clean sans-serif font */
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600&display=swap');
 
-/* Reset global styles */
 html, body, [class*="css"] {
     font-family: 'Manrope', sans-serif;
-    background-color: #F1F5F9 !important;  /* Soft light grey-blue */
-    color: #1F2937 !important; /* Slate-800 */
+    background-color: #f9fafb !important;
+    color: #1f2937 !important;
 }
 
-/* Main app wrapper */
+/* Main App Background */
 .stApp {
-    background-color: #F1F5F9;
+    background-color: #f9fafb;
     padding: 1rem;
 }
 
-/* Headings */
+/* HEADINGS */
 h1, h2, h3, h4, h5, h6 {
-    color: #1F2937 !important;
+    color: #111827 !important;
     font-weight: 600;
 }
 
-/* Sidebar styling */
+/* SIDEBAR */
 .stSidebar {
-    background-color: #FFFFFF !important;
-    border-right: 1px solid #E5E7EB;
-    padding: 1rem;
+    background-color: #ffffff !important;
+    padding: 1.5rem 1rem;
+    border-right: 1px solid #e5e7eb;
+    box-shadow: 1px 0 2px rgba(0,0,0,0.03);
 }
 
-/* Sidebar widgets */
+/* SIDEBAR WIDGETS */
 .stSidebar input,
 .stSidebar textarea,
-.stSidebar select,
-.stSidebar .stTextInput > div > div > input {
-    background-color: #F9FAFB;
-    color: #111827;
-    border: 1px solid #D1D5DB;
+.stSidebar select {
+    background-color: #f3f4f6 !important;
+    color: #1f2937 !important;
+    border: 1px solid #d1d5db !important;
     border-radius: 6px;
-    padding: 0.5rem 0.75rem;
+    padding: 0.5rem;
 }
 
-/* Input styling */
+/* INPUTS */
 input[type="text"], textarea {
-    background-color: #FFFFFF !important;
+    background-color: #ffffff !important;
     color: #111827 !important;
-    border: 1px solid #D1D5DB !important;
+    border: 1px solid #d1d5db !important;
     border-radius: 6px !important;
     padding: 0.5rem 0.75rem !important;
     box-shadow: none !important;
 }
 
-/* Remove glow/ghost effects on input wrappers */
+/* CLEAN WRAPPERS AROUND INPUTS */
 .stTextInput > div, .stTextInput > div > div,
 .stTextArea > div, .stTextArea > div > div {
     background: transparent !important;
@@ -359,78 +357,81 @@ input[type="text"], textarea {
     box-shadow: none !important;
 }
 
-/* Placeholder text */
+/* PLACEHOLDER TEXT */
 input::placeholder, textarea::placeholder {
-    color: #9CA3AF !important;
+    color: #9ca3af !important;
 }
 
-/* Button styling */
+/* BUTTONS */
 .stButton > button, .stDownloadButton > button {
-    background-color: #3B82F6; /* Blue-500 */
-    color: #FFFFFF;
+    background-color: #3b82f6;
+    color: white;
     border: none;
     border-radius: 6px;
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 1.25rem;
     font-weight: 600;
-}
-
-.stButton > button:hover, .stDownloadButton > button:hover {
-    background-color: #2563EB; /* Blue-600 */
     transition: background-color 0.2s ease-in-out;
 }
 
-/* Tabs */
+.stButton > button:hover, .stDownloadButton > button:hover {
+    background-color: #2563eb;
+}
+
+/* TABS */
 .stTabs [role="tab"] {
-    background-color: #E5E7EB;
+    background-color: #e5e7eb;
     color: #374151;
-    border-radius: 8px 8px 0 0;
+    border-radius: 6px 6px 0 0;
     padding: 0.5rem 1rem;
     margin-right: 0.5rem;
     font-weight: 500;
 }
 
 .stTabs [role="tab"][aria-selected="true"] {
-    background-color: #FFFFFF;
-    color: #1F2937;
-    font-weight: 700;
+    background-color: #ffffff;
+    color: #1f2937;
+    font-weight: 600;
 }
 
-/* Content containers (e.g., expander, data preview) */
-.stExpander, .st-cg, .st-c1, .stDataFrame {
-    background-color: #FFFFFF !important;
-    border-radius: 8px !important;
-    padding: 1rem !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    color: #1F2937 !important;
-}
-
-/* Dataframe text color */
-.stDataFrame thead, .stDataFrame tbody {
-    color: #111827;
-}
-
-/* Caption and labels */
-.stCaption, .stExpanderHeader {
-    color: #6B7280 !important;
-    font-size: 0.875rem;
-}
-
-/* Divider */
-.stDivider {
-    border-color: #E5E7EB;
-}
-
-/* Make headings inside specific container black */
-.st-emotion-cache-1gv3huu.eczjsme18 h2,
-.st-emotion-cache-1gv3huu.eczjsme18 h3 {
-    color: #000000 !important;
-}
-
-/* Add more padding to tabs with Streamlit's dynamic classes */
+/* TAB PANEL STYLING */
 .st-af, .st-ag, .st-ah, .st-ai, .st-aj,
 .st-ak, .st-al, .st-am, .st-an, .st-ao,
 .st-ap, .st-aq, .st-ar {
-    padding: 0.75rem 1.5rem !important;
+    padding: 1.25rem !important;
+    background-color: #ffffff !important;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* EXPANDERS AND BOXES */
+.stExpander, .st-cg, .st-c1, .stDataFrame {
+    background-color: #ffffff !important;
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    color: #1f2937 !important;
+}
+
+/* TABLES */
+.stDataFrame thead, .stDataFrame tbody {
+    color: #1f2937 !important;
+}
+
+/* LABELS AND CAPTIONS */
+.stCaption, .stExpanderHeader {
+    color: #6b7280 !important;
+    font-size: 0.875rem;
+}
+
+/* DIVIDER */
+.stDivider {
+    border-color: #e5e7eb;
+}
+
+/* HEADINGS IN EXTRACTED AREA */
+.st-emotion-cache-1gv3huu.eczjsme18 h2,
+.st-emotion-cache-1gv3huu.eczjsme18 h3 {
+    color: #000000 !important;
 }
 </style>
 """, unsafe_allow_html=True)
