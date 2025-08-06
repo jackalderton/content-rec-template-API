@@ -275,7 +275,7 @@ def process_url(
     if remove_before_h1:
         first_h1 = body.find("h1")
         if first_h1 is not None:
-            wrapper = body.new_tag("div")
+            wrapper = soup.new_tag("div")
             elem = first_h1
             while elem:
                 next_elem = elem.next_sibling
