@@ -296,7 +296,7 @@ def process_url(
 # -------------------------
 # STREAMLIT APP
 # -------------------------
-st.set_page_config(page_title="Content Rec Template Tool", page_icon="364704cc-6899-4fc3-b37c-29dbfd0a4f3f.png", layout="wide")
+st.set_page_config(page_title="Content Rec Template Tool", page_icon="JAFavicon.png", layout="wide")
 
 st.markdown("""
 <style>
