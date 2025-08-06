@@ -298,8 +298,6 @@ def process_url(
 # -------------------------
 st.set_page_config(page_title="Explore Template Autofill", page_icon="364704cc-6899-4fc3-b37c-29dbfd0a4f3f.png", layout="wide")
 
-""", unsafe_allow_html=True)
-
 st.title("Explore Template Autofill (Web)")
 
 with st.sidebar:
