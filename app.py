@@ -314,7 +314,7 @@ with single_tab:
                     st.write(meta)
                 with st.expander("Signposted content (preview)", expanded=True):
                     st.text("
-".join(lines))
+".join(lines))".join(lines))
                 if do_doc:
                     out_bytes = build_docx(tpl_file.read(), meta, lines)
                     st.download_button(
