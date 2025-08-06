@@ -368,6 +368,10 @@ st.markdown(
         border-radius: 6px;
     }
 
+    .st-emotion-cache-1gv3huu eczjsme18 {
+    color:#000000;
+    }
+    
     .css-1cpxqw2, .stDataFrame thead, .stDataFrame tbody {
         color: #FFFFFF;
     }
