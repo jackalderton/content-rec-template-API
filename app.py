@@ -405,6 +405,12 @@ textarea::placeholder {
 .stDivider {
     border-color: rgba(255,255,255,0.3);
 }
+
+.st-af, .st-ag, .st-ah, .st-ai, .st-aj,
+.st-ak, .st-al, .st-am, .st-an, .st-ao,
+.st-ap, .st-aq, .st-ar {
+    padding: 0.75rem 1.5rem !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
