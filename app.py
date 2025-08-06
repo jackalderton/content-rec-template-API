@@ -282,6 +282,13 @@ st.set_page_config(page_title="Content Rec Template Tool", page_icon="📄", lay
 
 st.title("Content Rec Template Generation Tool")
 st.sidebar.header("Template & Options")
+with open("blank_template.docx", "rb") as f:
+    st.sidebar.download_button(
+        "⬇ Download Blank Template",
+        data=f.read(),
+        file_name="blank_template.docx",
+        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
 tpl_file = st.sidebar.file_uploader("Upload Template as .DOCX file", type=["docx"])
 st.sidebar.subheader("Exclude Selectors")
 exclude_txt = st.sidebar.text_area("Comma-separated CSS selectors to remove from <body>", value=", ".join(DEFAULT_EXCLUDE), height=120)
@@ -313,7 +320,8 @@ with single_tab:
                 with st.expander("Meta (preview)", expanded=True):
                     st.write(meta)
                 with st.expander("Signposted content (preview)", expanded=True):
-                    st.text("\n".join(lines))
+                    st.text("
+".join(lines))
                 if do_doc:
                     out_bytes = build_docx(tpl_file.read(), meta, lines)
                     st.download_button(
