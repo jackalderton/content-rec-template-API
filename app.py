@@ -278,7 +278,7 @@ def process_url(
 # -------------------------
 # STREAMLIT APP
 # -------------------------
-st.set_page_config(page_title="Content Rec Template Tool", page_icon="📄", layout="wide")
+st.set_page_config(page_title="Content Rec Template Tool", page_icon="JAFavicon.png", layout="wide")
 
 st.title("Content Rec Template Generation Tool")
 st.sidebar.header("Template & Options")
