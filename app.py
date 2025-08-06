@@ -343,7 +343,7 @@ h1, h2, h3, h4, h5, h6 {
 /* TEXT INPUTS + TEXTAREAS */
 input[type="text"],
 textarea {
-    background-color: #f9fafb !important;
+    background-color: #f3f4f6 !important;
     color: #111827 !important;
     border: 1px solid #d1d5db !important;
     border-radius: 6px !important;
