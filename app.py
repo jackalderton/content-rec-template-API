@@ -13,6 +13,70 @@ from docx import Document
 from docx.text.paragraph import Paragraph
 from docx.oxml import OxmlElement
 
+st.markdown(
+    """
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Lexend&display=swap');
+
+    /* Global font */
+    html, body, [class*="css"] {
+        font-family: 'Lexend', sans-serif;
+    }
+
+    /* App background with a gradient */
+    .stApp {
+        background: linear-gradient(135deg, #2B2E4A 0%, #4E4C9C 100%);
+        background-attachment: fixed;
+        color: #ffffff;
+    }
+
+    /* Lighten form labels and expander headers */
+    label, .stTextInput > label, .stTextArea > label,
+    .stExpanderHeader {
+        color: #f1f1f1 !important;
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+
+    /* Form field styling: light background, dark text */
+    .stTextInput input,
+    .stTextArea textarea {
+        background-color: #f8f9fa !important;
+        color: #1e1e1e !important;
+        border-radius: 6px !important;
+        border: 1px solid #ddd !important;
+    }
+
+    /* Hover state for inputs */
+    .stTextInput input:hover,
+    .stTextArea textarea:hover {
+        border: 1px solid #aaa !important;
+    }
+
+    /* Container cards for groups */
+    div[data-testid="stContainer"] > div {
+        background-color: rgba(255, 255, 255, 0.92);
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        color: #222222;
+    }
+
+    /* Header and title text */
+    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+        color: #ffffff;
+    }
+
+    /* Caption text */
+    .stCaption {
+        color: #dddddd !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 # -------------------------
 # CONFIG / CONSTANTS
 # -------------------------
