@@ -299,171 +299,38 @@ def process_url(
 st.set_page_config(page_title="Explore Template Autofill", page_icon="364704cc-6899-4fc3-b37c-29dbfd0a4f3f.png", layout="wide")
 
 st.markdown("""
+
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600&display=swap');
-
-/* Reset and base font */
-html, body, [class*="css"] {
-    font-family: 'Manrope', sans-serif;
-    background-color: #f8fafc;
-    color: #1f2937;
-    font-size: 16px;
-    line-height: 1.5;
-}
-
-/* App container */
-.stApp {
-    background-color: #f8fafc;
-    padding: 2rem;
-}
-
-/* Headings */
-h1, h2, h3, h4, h5, h6 {
-    color: #0f172a;
-    font-weight: 600;
-}
-
-/* Sidebar */
-.stSidebar {
-    background-color: #ffffff !important;
-    padding: 1.5rem 1rem !important;
-    border-right: 1px solid #e2e8f0;
-}
-
-/* Sidebar widgets */
-.stSidebar input,
-.stSidebar textarea,
-.stSidebar select {
-    background-color: #ffffff !important;
-    border: 1px solid #cbd5e1 !important;
-    color: #1f2937 !important;
-    border-radius: 6px !important;
-    padding: 0.5rem !important;
-}
-
-/* Fix for text inputs */
-input[type="text"], textarea {
-    background-color: #ffffff !important;
-    color: #1f2937 !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 6px !important;
-    padding: 0.6rem 0.75rem !important;
-    font-size: 1rem;
-    box-shadow: none !important;
-    margin-top: 0.25rem;
-}
-
-/* Remove nested input wrappers that break layout */
-.stTextInput > div:first-child,
-.stTextInput > div:first-child > div {
-    all: unset !important;
-}
-
-/* Placeholder styling */
-input::placeholder,
-textarea::placeholder {
-    color: #94a3b8;
-}
-
-/* Buttons */
-.stButton > button,
-.stDownloadButton > button {
-    background-color: #3b82f6;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    padding: 0.6rem 1.25rem;
-    font-weight: 600;
-    font-size: 0.95rem;
-    transition: background-color 0.2s ease;
-}
-
-.stButton > button:hover,
-.stDownloadButton > button:hover {
-    background-color: #2563eb;
-}
-
-/* Tabs */
-.stTabs [role="tab"] {
-    background-color: #e2e8f0;
-    color: #1e293b;
-    border-radius: 6px 6px 0 0;
-    padding: 0.65rem 1.25rem;
-    margin-right: 0.5rem;
-    font-weight: 500;
-    font-size: 0.95rem;
-}
-
-.stTabs [role="tab"][aria-selected="true"] {
-    background-color: #ffffff;
-    color: #1f2937;
-    font-weight: 600;
-}
-
-/* Tab content area */
-.st-af, .st-ag, .st-ah, .st-ai, .st-aj,
-.st-ak, .st-al, .st-am, .st-an, .st-ao,
-.st-ap, .st-aq, .st-ar {
-    background-color: #ffffff !important;
-    border-radius: 0 0 8px 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    padding: 1.5rem !important;
-}
-
-/* Boxes like expanders and tables */
-.stExpander, .stDataFrame, .st-cg, .st-c1 {
-    background-color: #ffffff !important;
-    border-radius: 8px !important;
-    padding: 1rem !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-}
-
-/* Table text */
-.stDataFrame thead, .stDataFrame tbody {
-    color: #1f2937 !important;
-}
-
-/* Labels, captions, help text */
-.stCaption, .stExpanderHeader {
-    color: #64748b !important;
-    font-size: 0.875rem;
-}
-
-/* Divider */
-.stDivider {
-    border-color: #e2e8f0 !important;
-}
-
-/* Specific heading container override */
-.st-emotion-cache-1gv3huu.eczjsme18 h2,
-.st-emotion-cache-1gv3huu.eczjsme18 h3 {
-    color: #000000 !important;
-}
-
-/* Safe override on the inner base input container */
-div[data-baseweb="base-input"] > div {
-  background-color: #ffffff !important;
-  border-radius: 6px !important;
-}
-
-/* Specific styling for the input itself */
-div[data-baseweb="base-input"] input {
-  background-color: #ffffff !important;
-  color: #1f2937 !important;
-  border: 1px solid #cbd5e1 !important;
-  border-radius: 6px !important;
-  padding: 0.6rem !important;
-  font-size: 1rem;
-}
-
-/* Avoid using all: unset on parent wrappers */
-.stTextInput > div:first-child {
-  /* don’t clear everything: only style what needs styling */
-}
-
-/* For debugging, temporarily add this: */
+/* Restore input visibility and styling */
 div[data-baseweb="base-input"] {
-  outline: 2px dashed red !important;
+    background-color: white !important;
+    border: 1px solid #ccc !important;
+    padding: 6px 10px !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
+}
+
+/* Target actual input inside Streamlit wrapper */
+div[data-baseweb="base-input"] input {
+    background-color: white !important;
+    color: black !important;
+    font-size: 1rem !important;
+    padding: 8px !important;
+    border: none !important;
+    outline: none !important;
+}
+
+/* Make h2 and h3 headings black */
+.st-emotion-cache-1gv3huu h2,
+.st-emotion-cache-1gv3huu h3 {
+    color: black !important;
+}
+
+/* Add more padding to tabs */
+.st-af, .st-ag, .st-ah, .st-ai,
+.st-aj, .st-ak, .st-al, .st-am,
+.st-an, .st-ao, .st-ap, .st-aq, .st-ar {
+    padding: 12px 16px !important;
 }
 </style>
 
