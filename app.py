@@ -439,6 +439,32 @@ textarea::placeholder {
 .st-emotion-cache-1gv3huu.eczjsme18 h3 {
     color: #000000 !important;
 }
+
+/* Safe override on the inner base input container */
+div[data-baseweb="base-input"] > div {
+  background-color: #ffffff !important;
+  border-radius: 6px !important;
+}
+
+/* Specific styling for the input itself */
+div[data-baseweb="base-input"] input {
+  background-color: #ffffff !important;
+  color: #1f2937 !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px !important;
+  padding: 0.6rem !important;
+  font-size: 1rem;
+}
+
+/* Avoid using all: unset on parent wrappers */
+.stTextInput > div:first-child {
+  /* don’t clear everything: only style what needs styling */
+}
+
+/* For debugging, temporarily add this: */
+div[data-baseweb="base-input"] {
+  outline: 2px dashed red !important;
+}
 </style>
 
 """, unsafe_allow_html=True)
