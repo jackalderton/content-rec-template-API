@@ -300,6 +300,13 @@ st.set_page_config(page_title="Content Rec Template Tool", page_icon="364704cc-6
 
 st.markdown("""
 <style>
+/* Import a Google Font */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
+
+body {
+    font-family: 'Montserrat', sans-serif;
+}
+
 /* Main title styling */
 .st-emotion-cache-1j0k826 {
     text-align: center;
@@ -307,6 +314,7 @@ st.markdown("""
     font-size: 3em;
     padding-bottom: 0.5em;
     border-bottom: 2px solid #4A90E2;
+    font-family: 'Montserrat', sans-serif;
 }
 
 /* Sidebar styling */
@@ -324,6 +332,7 @@ st.markdown("""
     border: none;
     font-weight: bold;
     color: #E0E0E0;
+    font-family: 'Montserrat', sans-serif;
 }
 
 /* Button styling */
@@ -335,6 +344,7 @@ st.markdown("""
     border-radius: 8px;
     padding: 10px;
     transition: background-color 0.3s, color 0.3s;
+    font-family: 'Montserrat', sans-serif;
 }
 
 .stButton>button:hover {
