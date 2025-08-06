@@ -298,100 +298,115 @@ def process_url(
 # -------------------------
 st.set_page_config(page_title="Explore Template Autofill", page_icon="364704cc-6899-4fc3-b37c-29dbfd0a4f3f.png", layout="wide")
 
-st.markdown(
-    """
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600&display=swap');
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600&display=swap');
 
-    html, body, [class*="css"] {
-        font-family: 'Manrope', sans-serif;
-        background-color: #537DFC !important;
-        color: #FFFFFF !important;
-    }
+/* GLOBAL STYLES */
+html, body, [class*="css"] {
+    font-family: 'Manrope', sans-serif;
+    background-color: #537DFC !important;
+    color: #FFFFFF !important;
+}
 
-    .stApp {
-        background-color: #537DFC;
-    }
+.stApp {
+    background-color: #537DFC;
+}
 
-    h1, h2, h3, h4, h5, h6 {
-        color: #FFFFFF
-    }
+h1, h2, h3, h4, h5, h6 {
+    color: #FFFFFF !important;
+}
 
-    .stTextInput > div > div > input,
-    .stTextArea textarea,
-    .stSelectbox > div > div,
-    .stFileUploader > div,
-    .stButton > button,
-    .stDownloadButton > button,
-    .stToggleSwitch,
-    .stRadio > div > label,
-    .stCheckbox > label {
-        background-color: rgba(255, 255, 255, 0.1);
-        color: #FFFFFF;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        border-radius: 6px;
-    }
+/* HEADINGS IN MAIN CONTAINER */
+.st-emotion-cache-1gv3huu.eczjsme18 h2,
+.st-emotion-cache-1gv3huu.eczjsme18 h3 {
+    color: #000000 !important;
+}
 
-    .stButton > button:hover,
-    .stDownloadButton > button:hover {
-        background-color: rgba(255, 255, 255, 0.2);
-    }
+/* TEXT INPUT STYLING */
+input[type="text"],
+textarea {
+    color: #000000 !important;
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+}
 
-    .stTextInput > div > div > input::placeholder,
-    .stTextArea textarea::placeholder {
-        color: #DDDDDD;
-    }
+/* PLACEHOLDER TEXT */
+input::placeholder,
+textarea::placeholder {
+    color: #AAAAAA !important;
+}
 
-    .stSidebar, .st-cg, .st-c1, .css-1d391kg, .css-1kyxreq {
-        background-color: rgba(255,255,255,0.1) !important;
-        color: #FFFFFF !important;
-        border-radius: 8px;
-        padding: 10px;
-    }
+/* WIDGET STYLING */
+.stTextInput > div > div > input,
+.stTextArea textarea,
+.stSelectbox > div > div,
+.stFileUploader > div,
+.stButton > button,
+.stDownloadButton > button,
+.stToggleSwitch,
+.stRadio > div > label,
+.stCheckbox > label {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #FFFFFF;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+}
 
-    .stTabs [role="tab"] {
-        background-color: rgba(255,255,255,0.1);
-        color: #FFFFFF;
-        border: none;
-        border-radius: 8px 8px 0 0;
-        margin-right: 4px;
-    }
+.stButton > button:hover,
+.stDownloadButton > button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
 
-    .stTabs [role="tab"][aria-selected="true"] {
-        background-color: rgba(255,255,255,0.2);
-        color: #FFFFFF;
-        font-weight: bold;
-    }
+/* SIDEBAR AND CONTAINERS */
+.stSidebar, .st-cg, .st-c1, .css-1d391kg, .css-1kyxreq {
+    background-color: rgba(255,255,255,0.1) !important;
+    color: #FFFFFF !important;
+    border-radius: 8px;
+    padding: 10px;
+}
 
-    .stDataFrame, .css-1cpxqw2 {
-        background-color: rgba(255,255,255,0.05);
-        border-radius: 6px;
-    }
+/* TABS */
+.stTabs [role="tab"] {
+    background-color: rgba(255,255,255,0.1);
+    color: #FFFFFF;
+    border: none;
+    border-radius: 8px 8px 0 0;
+    margin-right: 4px;
+}
 
-    .st-emotion-cache-1gv3huu eczjsme18 h2 h3 {
-    color:#000000;
-    }
-    
-    .css-1cpxqw2, .stDataFrame thead, .stDataFrame tbody {
-        color: #FFFFFF;
-    }
+.stTabs [role="tab"][aria-selected="true"] {
+    background-color: rgba(255,255,255,0.2);
+    color: #FFFFFF;
+    font-weight: bold;
+}
 
-    .stCaption, .stExpanderHeader {
-        color: #DDDDDD !important;
-    }
+/* DATAFRAMES */
+.stDataFrame, .css-1cpxqw2 {
+    background-color: rgba(255,255,255,0.05);
+    border-radius: 6px;
+}
 
-    .stExpander {
-        background-color: rgba(255, 255, 255, 0.05);
-        border-radius: 6px;
-    }
+.css-1cpxqw2, .stDataFrame thead, .stDataFrame tbody {
+    color: #FFFFFF;
+}
 
-    .stDivider {
-        border-color: rgba(255,255,255,0.3);
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+/* EXPANDERS, DIVIDERS, MISC */
+.stCaption, .stExpanderHeader {
+    color: #DDDDDD !important;
+}
+
+.stExpander {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+}
+
+.stDivider {
+    border-color: rgba(255,255,255,0.3);
+}
+</style>
+""", unsafe_allow_html=True)
 
 st.title("Explore Template Autofill (Web)")
 
