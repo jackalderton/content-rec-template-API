@@ -1,0 +1,19 @@
+[theme]
+# Primary accent for interactive elements
+primaryColor="#4A90E2"
+
+# Background colour for the main content area
+backgroundColor="#242831"
+
+# Background colour for the sidebar and most widgets
+secondaryBackgroundColor="#323640"
+
+# Colour used for almost all text
+textColor="#E0E0E0"
+
+# Font family for all text in the app
+font="sans serif"
+
+[client]
+# Change the sidebar width
+sidebarWidth="250px"
