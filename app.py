@@ -298,42 +298,6 @@ def process_url(
 # -------------------------
 st.set_page_config(page_title="Explore Template Autofill", page_icon="364704cc-6899-4fc3-b37c-29dbfd0a4f3f.png", layout="wide")
 
-st.markdown("""
-
-<style>
-/* Restore input visibility and styling */
-div[data-baseweb="base-input"] {
-    background-color: white !important;
-    border: 1px solid #ccc !important;
-    padding: 6px 10px !important;
-    border-radius: 6px !important;
-    box-shadow: none !important;
-}
-
-/* Target actual input inside Streamlit wrapper */
-div[data-baseweb="base-input"] input {
-    background-color: white !important;
-    color: black !important;
-    font-size: 1rem !important;
-    padding: 8px !important;
-    border: none !important;
-    outline: none !important;
-}
-
-/* Make h2 and h3 headings black */
-.st-emotion-cache-1gv3huu h2,
-.st-emotion-cache-1gv3huu h3 {
-    color: black !important;
-}
-
-/* Add more padding to tabs */
-.st-af, .st-ag, .st-ah, .st-ai,
-.st-aj, .st-ak, .st-al, .st-am,
-.st-an, .st-ao, .st-ap, .st-aq, .st-ar {
-    padding: 12px 16px !important;
-}
-</style>
-
 """, unsafe_allow_html=True)
 
 st.title("Explore Template Autofill (Web)")
