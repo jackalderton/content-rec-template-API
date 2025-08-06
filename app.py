@@ -378,6 +378,17 @@ with st.sidebar:
     st.caption("This should be your blank template with placeholders (e.g., [PAGE], [DATE], [PAGE BODY CONTENT], etc.).")
 
     st.divider()
+    st.subheader("Need a template?")
+    with open("blank_template.docx", "rb") as file:
+        st.download_button(
+            label="Download a Blank Template",
+            data=file,
+            file_name="blank_template.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+    st.caption("You can use this as a starting point. It contains all the necessary placeholders.")
+
+    st.divider()
     st.subheader("Exclude Selectors")
     exclude_txt = st.text_area(
         "Comma-separated CSS selectors to remove from <body>",
