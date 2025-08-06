@@ -314,7 +314,7 @@ st.markdown(
     }
 
     h1, h2, h3, h4, h5, h6 {
-        color: #FFFFFF !important;
+        color: #FFFFFF
     }
 
     .stTextInput > div > div > input,
@@ -368,7 +368,7 @@ st.markdown(
         border-radius: 6px;
     }
 
-    .st-emotion-cache-1gv3huu eczjsme18 {
+    .st-emotion-cache-1gv3huu eczjsme18 h2 h3 {
     color:#000000;
     }
     
