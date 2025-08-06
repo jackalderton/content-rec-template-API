@@ -303,7 +303,7 @@ st.markdown("""
 /* Import a Google Font */
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
 
-body {
+body, h1, h2, h3, p {
     font-family: 'Montserrat', sans-serif;
 }
 
