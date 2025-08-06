@@ -300,112 +300,138 @@ st.set_page_config(page_title="Explore Template Autofill", page_icon="364704cc-6
 
 st.markdown("""
 <style>
+/* Import clean sans-serif font */
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600&display=swap');
 
-/* GLOBAL STYLES */
+/* Reset global styles */
 html, body, [class*="css"] {
     font-family: 'Manrope', sans-serif;
-    background-color: #537DFC !important;
-    color: #FFFFFF !important;
+    background-color: #F1F5F9 !important;  /* Soft light grey-blue */
+    color: #1F2937 !important; /* Slate-800 */
 }
 
+/* Main app wrapper */
 .stApp {
-    background-color: #537DFC;
+    background-color: #F1F5F9;
+    padding: 1rem;
 }
 
+/* Headings */
 h1, h2, h3, h4, h5, h6 {
-    color: #FFFFFF !important;
+    color: #1F2937 !important;
+    font-weight: 600;
 }
 
-/* HEADINGS IN MAIN CONTAINER */
+/* Sidebar styling */
+.stSidebar {
+    background-color: #FFFFFF !important;
+    border-right: 1px solid #E5E7EB;
+    padding: 1rem;
+}
+
+/* Sidebar widgets */
+.stSidebar input,
+.stSidebar textarea,
+.stSidebar select,
+.stSidebar .stTextInput > div > div > input {
+    background-color: #F9FAFB;
+    color: #111827;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+}
+
+/* Input styling */
+input[type="text"], textarea {
+    background-color: #FFFFFF !important;
+    color: #111827 !important;
+    border: 1px solid #D1D5DB !important;
+    border-radius: 6px !important;
+    padding: 0.5rem 0.75rem !important;
+    box-shadow: none !important;
+}
+
+/* Remove glow/ghost effects on input wrappers */
+.stTextInput > div, .stTextInput > div > div,
+.stTextArea > div, .stTextArea > div > div {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* Placeholder text */
+input::placeholder, textarea::placeholder {
+    color: #9CA3AF !important;
+}
+
+/* Button styling */
+.stButton > button, .stDownloadButton > button {
+    background-color: #3B82F6; /* Blue-500 */
+    color: #FFFFFF;
+    border: none;
+    border-radius: 6px;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+}
+
+.stButton > button:hover, .stDownloadButton > button:hover {
+    background-color: #2563EB; /* Blue-600 */
+    transition: background-color 0.2s ease-in-out;
+}
+
+/* Tabs */
+.stTabs [role="tab"] {
+    background-color: #E5E7EB;
+    color: #374151;
+    border-radius: 8px 8px 0 0;
+    padding: 0.5rem 1rem;
+    margin-right: 0.5rem;
+    font-weight: 500;
+}
+
+.stTabs [role="tab"][aria-selected="true"] {
+    background-color: #FFFFFF;
+    color: #1F2937;
+    font-weight: 700;
+}
+
+/* Content containers (e.g., expander, data preview) */
+.stExpander, .st-cg, .st-c1, .stDataFrame {
+    background-color: #FFFFFF !important;
+    border-radius: 8px !important;
+    padding: 1rem !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    color: #1F2937 !important;
+}
+
+/* Dataframe text color */
+.stDataFrame thead, .stDataFrame tbody {
+    color: #111827;
+}
+
+/* Caption and labels */
+.stCaption, .stExpanderHeader {
+    color: #6B7280 !important;
+    font-size: 0.875rem;
+}
+
+/* Divider */
+.stDivider {
+    border-color: #E5E7EB;
+}
+
+/* Make headings inside specific container black */
 .st-emotion-cache-1gv3huu.eczjsme18 h2,
 .st-emotion-cache-1gv3huu.eczjsme18 h3 {
     color: #000000 !important;
 }
 
-/* TEXT INPUT STYLING */
-input[type="text"],
-textarea {
-    color: #000000 !important;
-    background-color: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(0, 0, 0, 0.2);
-    border-radius: 6px;
+/* Add more padding to tabs with Streamlit's dynamic classes */
+.st-af, .st-ag, .st-ah, .st-ai, .st-aj,
+.st-ak, .st-al, .st-am, .st-an, .st-ao,
+.st-ap, .st-aq, .st-ar {
+    padding: 0.75rem 1.5rem !important;
 }
-
-/* PLACEHOLDER TEXT */
-input::placeholder,
-textarea::placeholder {
-    color: #AAAAAA !important;
-}
-
-/* WIDGET STYLING */
-.stTextInput > div > div > input,
-.stTextArea textarea,
-.stSelectbox > div > div,
-.stFileUploader > div,
-.stButton > button,
-.stDownloadButton > button,
-.stToggleSwitch,
-.stRadio > div > label,
-.stCheckbox > label {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: #FFFFFF;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 6px;
-}
-
-.stButton > button:hover,
-.stDownloadButton > button:hover {
-    background-color: rgba(255, 255, 255, 0.2);
-}
-
-/* SIDEBAR AND CONTAINERS */
-.stSidebar, .st-cg, .st-c1, .css-1d391kg, .css-1kyxreq {
-    background-color: rgba(255,255,255,0.1) !important;
-    color: #FFFFFF !important;
-    border-radius: 8px;
-    padding: 10px;
-}
-
-/* TABS */
-.stTabs [role="tab"] {
-    background-color: rgba(255,255,255,0.1);
-    color: #FFFFFF;
-    border: none;
-    border-radius: 8px 8px 0 0;
-    margin-right: 4px;
-}
-
-.stTabs [role="tab"][aria-selected="true"] {
-    background-color: rgba(255,255,255,0.2);
-    color: #FFFFFF;
-    font-weight: bold;
-}
-
-/* DATAFRAMES */
-.stDataFrame, .css-1cpxqw2 {
-    background-color: rgba(255,255,255,0.05);
-    border-radius: 6px;
-}
-
-.css-1cpxqw2, .stDataFrame thead, .stDataFrame tbody {
-    color: #FFFFFF;
-}
-
-/* EXPANDERS, DIVIDERS, MISC */
-.stCaption, .stExpanderHeader {
-    color: #DDDDDD !important;
-}
-
-.stExpander {
-    background-color: rgba(255, 255, 255, 0.05);
-    border-radius: 6px;
-}
-
-.stDivider {
-    border-color: rgba(255,255,255,0.3);
-}
-
 </style>
 """, unsafe_allow_html=True)
 
