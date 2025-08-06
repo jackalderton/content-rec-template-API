@@ -252,7 +252,6 @@ def process_url(
     url: str,
     exclude_selectors: list[str],
     annotate_links: bool = False,
-    remove_before_h1: bool = False,
 ):
     final_url, html = fetch_html(url)
     soup = BeautifulSoup(html, "lxml")
@@ -272,22 +271,7 @@ def process_url(
             pass
 
     # extract signposted lines
-    if remove_before_h1:
-        first_h1 = body.find("h1")
-        if first_h1 is not None:
-            # Remove all elements that appear before the first <h1>
-            for el in list(body.contents):
-                if el == first_h1:
-                    break
-                try:
-                    el.extract()
-                except Exception:
-                    continue
-        # fall through to extract everything remaining in <body>
-        lines = extract_signposted_lines_from_body(body, annotate_links=annotate_links)
-    else:
-        lines = extract_signposted_lines_from_body(body, annotate_links=annotate_links)
-        lines = extract_signposted_lines_from_body(body, annotate_links=annotate_links)
+    lines = extract_signposted_lines_from_body(body, annotate_links=annotate_links)
 
     # meta
     head = soup.head or soup
@@ -416,8 +400,6 @@ with st.sidebar:
     st.subheader("Link formatting")
     annotate_links = st.toggle("Append (→ URL) after anchor text", value=False)
 
-    remove_before_h1 = st.checkbox("Ignore all body content before first <h1>", value=False)
-
     st.caption("Timezone fixed to Europe/London; dates in DD/MM/YYYY.")
 
 tab1, tab2 = st.tabs(["Single URL", "Batch (CSV)"])
@@ -436,7 +418,7 @@ with tab1:
             st.error("Please upload your Rec Template.docx in the sidebar first.")
         else:
             try:
-                meta, lines = process_url(url, exclude_selectors, annotate_links=annotate_links, remove_before_h1=remove_before_h1)
+                meta, lines = process_url(url, exclude_selectors, annotate_links=annotate_links)
                 st.success("Extracted successfully.")
                 with st.expander("Meta (preview)", expanded=True):
                     st.write(meta)
@@ -477,7 +459,7 @@ with tab2:
                 for i, row in enumerate(rows, 1):
                     u = row["url"].strip()
                     try:
-                        meta, lines = process_url(u, exclude_selectors, annotate_links=annotate_links, remove_before_h1=remove_before_h1)
+                        meta, lines = process_url(u, exclude_selectors, annotate_links=annotate_links)
                         out_name = (row.get("out_name") or f"{meta['page']} - Content Recommendations").strip()
                         out_bytes = build_docx(tpl_bytes, meta, lines)
                         zf.writestr(f"{out_name}.docx", out_bytes)
