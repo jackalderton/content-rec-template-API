@@ -296,7 +296,7 @@ def process_url(
 # -------------------------
 # STREAMLIT APP
 # -------------------------
-st.set_page_config(page_title="Explore Template Autofill", page_icon="364704cc-6899-4fc3-b37c-29dbfd0a4f3f.png", layout="wide")
+st.set_page_config(page_title="Content Rec Template Tool", page_icon="364704cc-6899-4fc3-b37c-29dbfd0a4f3f.png", layout="wide")
 
 st.markdown("""
 <style>
@@ -360,7 +360,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("Explore Template Autofill (Web)")
+st.title("Content Rec Template Generation Tool")
 
 with st.sidebar:
     st.header("Template & Options")
@@ -385,7 +385,7 @@ tab1, tab2 = st.tabs(["Single URL", "Batch (CSV)"])
 
 with tab1:
     st.subheader("Single page")
-    url = st.text_input("URL", value="https://www.explore.co.uk/destinations/asia/cambodia")
+    url = st.text_input("URL", value="https://www.example.com")
     col_a, col_b = st.columns([1,1])
     with col_a:
         do_preview = st.button("Extract preview")
