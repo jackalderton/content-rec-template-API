@@ -302,13 +302,14 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600&display=swap');
 
+/* GLOBAL RESET */
 html, body, [class*="css"] {
     font-family: 'Manrope', sans-serif;
     background-color: #f9fafb !important;
     color: #1f2937 !important;
 }
 
-/* Main App Background */
+/* MAIN APP WRAPPER */
 .stApp {
     background-color: #f9fafb;
     padding: 1rem;
@@ -339,9 +340,10 @@ h1, h2, h3, h4, h5, h6 {
     padding: 0.5rem;
 }
 
-/* INPUTS */
-input[type="text"], textarea {
-    background-color: #ffffff !important;
+/* TEXT INPUTS + TEXTAREAS */
+input[type="text"],
+textarea {
+    background-color: #f9fafb !important;
     color: #111827 !important;
     border: 1px solid #d1d5db !important;
     border-radius: 6px !important;
@@ -349,7 +351,7 @@ input[type="text"], textarea {
     box-shadow: none !important;
 }
 
-/* CLEAN WRAPPERS AROUND INPUTS */
+/* REMOVE STREAMLIT WRAPPER STYLES ON INPUTS */
 .stTextInput > div, .stTextInput > div > div,
 .stTextArea > div, .stTextArea > div > div {
     background: transparent !important;
@@ -358,12 +360,14 @@ input[type="text"], textarea {
 }
 
 /* PLACEHOLDER TEXT */
-input::placeholder, textarea::placeholder {
+input::placeholder,
+textarea::placeholder {
     color: #9ca3af !important;
 }
 
 /* BUTTONS */
-.stButton > button, .stDownloadButton > button {
+.stButton > button,
+.stDownloadButton > button {
     background-color: #3b82f6;
     color: white;
     border: none;
@@ -373,7 +377,8 @@ input::placeholder, textarea::placeholder {
     transition: background-color 0.2s ease-in-out;
 }
 
-.stButton > button:hover, .stDownloadButton > button:hover {
+.stButton > button:hover,
+.stDownloadButton > button:hover {
     background-color: #2563eb;
 }
 
@@ -393,7 +398,7 @@ input::placeholder, textarea::placeholder {
     font-weight: 600;
 }
 
-/* TAB PANEL STYLING */
+/* TAB PANELS */
 .st-af, .st-ag, .st-ah, .st-ai, .st-aj,
 .st-ak, .st-al, .st-am, .st-an, .st-ao,
 .st-ap, .st-aq, .st-ar {
@@ -403,8 +408,10 @@ input::placeholder, textarea::placeholder {
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
-/* EXPANDERS AND BOXES */
-.stExpander, .st-cg, .st-c1, .stDataFrame {
+/* EXPANDERS, DATAFRAMES, CONTAINERS */
+.stExpander,
+.st-cg, .st-c1,
+.stDataFrame {
     background-color: #ffffff !important;
     border-radius: 8px;
     padding: 1rem;
@@ -412,28 +419,31 @@ input::placeholder, textarea::placeholder {
     color: #1f2937 !important;
 }
 
-/* TABLES */
-.stDataFrame thead, .stDataFrame tbody {
+/* TABLE HEADERS + BODY TEXT */
+.stDataFrame thead,
+.stDataFrame tbody {
     color: #1f2937 !important;
 }
 
-/* LABELS AND CAPTIONS */
-.stCaption, .stExpanderHeader {
+/* LABELS + CAPTIONS */
+.stCaption,
+.stExpanderHeader {
     color: #6b7280 !important;
     font-size: 0.875rem;
 }
 
-/* DIVIDER */
+/* DIVIDERS */
 .stDivider {
     border-color: #e5e7eb;
 }
 
-/* HEADINGS IN EXTRACTED AREA */
+/* ENSURE CERTAIN H2/H3s ARE BLACK */
 .st-emotion-cache-1gv3huu.eczjsme18 h2,
 .st-emotion-cache-1gv3huu.eczjsme18 h3 {
     color: #000000 !important;
 }
 </style>
+
 """, unsafe_allow_html=True)
 
 st.title("Explore Template Autofill (Web)")
