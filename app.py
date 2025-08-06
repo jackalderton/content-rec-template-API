@@ -150,13 +150,219 @@ def remove_before_first_h1(soup: BeautifulSoup):
     h1 = soup.body.find("h1")
     if not h1:
         return
-    # Remove ALL prior elements in document order
-    found = False
-    for el in list(soup.body.descendants):
-        if isinstance(el, Tag) and el.name == "h1":
-            found = True
+
+    # Identify the chain of parent containers for the <h1>
+    h1_ancestors = set(h1.parents)
+
+    # Remove all top-level children in <body> until we reach the one that contains the first <h1>
+    for el in list(soup.body.children):
+        if el == h1 or el in h1_ancestors:
             break
         if isinstance(el, Tag):
             el.decompose()
-    if not found:
+    return
+
+# -------------------------
+# DOCX helpers
+# -------------------------
+def iter_paragraphs_and_tables(doc: Document):
+    for p in doc.paragraphs:
+        yield p
+    for tbl in doc.tables:
+        for row in tbl.rows:
+            for cell in row.cells:
+                for p in cell.paragraphs:
+                    yield p
+
+def replace_placeholders_safe(doc: Document, mapping: dict[str, str]):
+    keys = sorted(mapping.keys(), key=len, reverse=True)
+    for p in iter_paragraphs_and_tables(doc):
+        t = p.text or ""
+        replaced = False
+        for k in keys:
+            v = mapping[k]
+            if k in t:
+                t = t.replace(k, v)
+                replaced = True
+        if replaced:
+            for r in list(p.runs):
+                r.clear()
+            p.clear()
+            p.add_run(t)
+
+def find_placeholder_paragraph(doc: Document, placeholder: str) -> Paragraph | None:
+    for p in iter_paragraphs_and_tables(doc):
+        if placeholder in (p.text or ""):
+            return p
+    return None
+
+def insert_paragraph_after(paragraph: Paragraph, text: str = "") -> Paragraph:
+    new_p = OxmlElement("w:p")
+    paragraph._p.addnext(new_p)
+    new_para = Paragraph(new_p, paragraph._parent)
+    if text:
+        new_para.add_run(text)
+    return new_para
+
+def replace_placeholder_with_lines(doc: Document, placeholder: str, lines: list[str]):
+    target = find_placeholder_paragraph(doc, placeholder)
+    if target is None:
+        raise ValueError(f"Placeholder '{placeholder}' not found in template.")
+    if not lines:
+        target.clear()
         return
+    target.clear()
+    target.add_run(lines[0])
+    anchor = target
+    for line in lines[1:]:
+        anchor = insert_paragraph_after(anchor, line)
+
+def build_docx(template_bytes: bytes, meta: dict, lines: list[str]) -> bytes:
+    bio = io.BytesIO(template_bytes)
+    doc = Document(bio)
+    replace_placeholders_safe(doc, {
+        "[PAGE]": meta["page"],
+        "[DATE]": meta["date"],
+        "[URL]": meta["url"],
+        "[TITLE]": meta["title"],
+        "[TITLE LENGTH]": str(meta["title_len"]),
+        "[DESCRIPTION]": meta["description"],
+        "DESCRIPTION": meta["description"],
+        "[DESCRIPTION LENGTH]": str(meta["description_len"]),
+    })
+    replace_placeholder_with_lines(doc, "[PAGE BODY CONTENT]", lines)
+    out = io.BytesIO()
+    doc.save(out)
+    out.seek(0)
+    return out.read()
+
+# -------------------------
+# CORE PROCESS
+# -------------------------
+def process_url(
+    url: str,
+    exclude_selectors: list[str],
+    annotate_links: bool = False,
+    remove_pre_h1: bool = False,
+):
+    final_url, html = fetch_html(url)
+    soup = BeautifulSoup(html, "lxml")
+    if remove_pre_h1:
+        remove_before_first_h1(soup)
+    for el in soup.find_all(list(ALWAYS_STRIP)):
+        el.decompose()
+    body = soup.body or soup
+    for sel in exclude_selectors:
+        try:
+            for el in body.select(sel):
+                el.decompose()
+        except Exception:
+            pass
+    lines = extract_signposted_lines_from_body(body, annotate_links=annotate_links)
+    head = soup.head or soup
+    title = head.title.string.strip() if (head and head.title and head.title.string) else "N/A"
+    meta_el = head.find("meta", attrs={"name": "description"}) if head else None
+    description = meta_el.get("content").strip() if (meta_el and meta_el.get("content")) else "N/A"
+    page_name = first_h1_text(soup) or fallback_page_name_from_url(final_url)
+    meta = {
+        "page": page_name,
+        "date": uk_today_str(),
+        "url": final_url,
+        "title": title,
+        "title_len": len(title) if title != "N/A" else 0,
+        "description": description,
+        "description_len": len(description) if description != "N/A" else 0,
+    }
+    return meta, lines
+
+# -------------------------
+# STREAMLIT APP
+# -------------------------
+st.set_page_config(page_title="Content Rec Template Tool", page_icon="📄", layout="wide")
+
+st.title("Content Rec Template Generation Tool")
+st.sidebar.header("Template & Options")
+tpl_file = st.sidebar.file_uploader("Upload Template as .DOCX file", type=["docx"])
+st.sidebar.subheader("Exclude Selectors")
+exclude_txt = st.sidebar.text_area("Comma-separated CSS selectors to remove from <body>", value=", ".join(DEFAULT_EXCLUDE), height=120)
+exclude_selectors = [s.strip() for s in exclude_txt.split(",") if s.strip()]
+st.sidebar.subheader("Link formatting")
+annotate_links = st.sidebar.toggle("Append (→ URL) after anchor text", value=False)
+st.sidebar.subheader("Advanced Options")
+remove_pre_h1 = st.sidebar.toggle("Remove everything before first <h1>", value=False)
+
+# Tabs
+single_tab, batch_tab = st.tabs(["Single URL", "Batch (CSV)"])
+
+with single_tab:
+    st.subheader("Single page")
+    url = st.text_input("URL", value="https://www.example.com")
+    col_a, col_b = st.columns([1,1])
+    with col_a:
+        do_preview = st.button("Extract preview")
+    with col_b:
+        do_doc = st.button("Generate DOCX")
+
+    if do_preview or do_doc:
+        if not tpl_file and do_doc:
+            st.error("Please upload your Rec Template.docx in the sidebar first.")
+        else:
+            try:
+                meta, lines = process_url(url, exclude_selectors, annotate_links=annotate_links, remove_pre_h1=remove_pre_h1)
+                st.success("Extracted successfully.")
+                with st.expander("Meta (preview)", expanded=True):
+                    st.write(meta)
+                with st.expander("Signposted content (preview)", expanded=True):
+                    st.text("
+".join(lines))
+                if do_doc:
+                    out_bytes = build_docx(tpl_file.read(), meta, lines)
+                    st.download_button(
+                        "Download DOCX",
+                        data=out_bytes,
+                        file_name=f"{meta['page']} - Content Recommendations.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    )
+            except Exception as e:
+                st.exception(e)
+
+with batch_tab:
+    st.subheader("Batch process CSV")
+    st.caption("Upload a CSV with a header row; required column: url. Optional: out_name.")
+    batch_file = st.file_uploader("CSV file", type=["csv"], key="csv")
+    if st.button("Run batch"):
+        if not tpl_file:
+            st.error("Please upload your Rec Template.docx in the sidebar first.")
+        elif not batch_file:
+            st.error("Please upload a CSV.")
+        else:
+            tpl_bytes = tpl_file.read()
+            rows = list(csv.DictReader(io.StringIO(batch_file.getvalue().decode("utf-8"))))
+            if not rows:
+                st.error("CSV appears empty.")
+            elif "url" not in rows[0]:
+                st.error("CSV must include a 'url' column.")
+            else:
+                memzip = io.BytesIO()
+                zf = zipfile.ZipFile(memzip, "w", zipfile.ZIP_DEFLATED)
+                results = []
+                for row in rows:
+                    u = row["url"].strip()
+                    try:
+                        meta, lines = process_url(u, exclude_selectors, annotate_links=annotate_links, remove_pre_h1=remove_pre_h1)
+                        out_name = (row.get("out_name") or f"{meta['page']} - Content Recommendations").strip()
+                        out_bytes = build_docx(tpl_bytes, meta, lines)
+                        zf.writestr(f"{out_name}.docx", out_bytes)
+                        results.append({"url": u, "status": "ok", "file": f"{out_name}.docx"})
+                    except Exception as e:
+                        results.append({"url": u, "status": f"error: {e}", "file": ""})
+                zf.close()
+                memzip.seek(0)
+                st.success("Batch complete.")
+                st.dataframe(results)
+                st.download_button(
+                    "Download ZIP",
+                    data=memzip.read(),
+                    file_name="content_recommendations.zip",
+                    mime="application/zip",
+                )
