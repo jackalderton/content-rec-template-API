@@ -285,7 +285,7 @@ def process_url(
                     continue
         # fall through to extract everything remaining in <body>
         lines = extract_signposted_lines_from_body(body, annotate_links=annotate_links)
-        else:
+    else:
             lines = extract_signposted_lines_from_body(body, annotate_links=annotate_links)
     else:
         lines = extract_signposted_lines_from_body(body, annotate_links=annotate_links)
