@@ -275,15 +275,16 @@ def process_url(
     if remove_before_h1:
         first_h1 = body.find("h1")
         if first_h1 is not None:
-            wrapper = soup.new_tag("div")
-            include = False
-            for el in body.descendants:
-                if isinstance(el, Tag):
-                    if el == first_h1:
-                        include = True
-                    if include:
-                        wrapper.append(el.extract())
-            lines = extract_signposted_lines_from_body(wrapper, annotate_links=annotate_links)
+            # Remove all elements that appear before the first <h1>
+            for el in list(body.contents):
+                if el == first_h1:
+                    break
+                try:
+                    el.extract()
+                except Exception:
+                    continue
+        # fall through to extract everything remaining in <body>
+        lines = extract_signposted_lines_from_body(body, annotate_links=annotate_links)
         else:
             lines = extract_signposted_lines_from_body(body, annotate_links=annotate_links)
     else:
