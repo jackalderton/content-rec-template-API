@@ -35,7 +35,8 @@ DATE_FMT = "%d/%m/%Y"  # UK format
 # -------------------------
 # UTILITIES
 # -------------------------
-def uk_today_str():
+
+def uk_today_str() -> str:
     return datetime.now(ZoneInfo(DATE_TZ)).strftime(DATE_FMT)
 
 
@@ -121,7 +122,7 @@ def extract_signposted_lines_from_body(body: Tag, annotate_links: bool) -> list[
         if name in ALWAYS_STRIP:
             return
 
-        if name in {"h1","h2","h3","h4","h5","h6"}:
+        if name in {"h1", "h2", "h3", "h4", "h5", "h6"}:
             txt = extract_text_preserve_breaks(tag, annotate_links)
             if txt.strip():
                 emit_lines(name, txt)
@@ -296,23 +297,22 @@ def process_url(
             pass
 
     # If requested, remove everything before the first <h1> but keep the rest of body intact
-if remove_before_h1:
-    first_h1 = body.find("h1")
-    if first_h1 is not None:
-        # Find the top-level <body> child that contains this <h1>
-        top = first_h1
-        while top is not None and top.parent is not None and top.parent != body:
-            top = top.parent
-
-        # If located, remove all siblings before that top-level node
-        if top is not None and top in body.contents:
-            for el in list(body.contents):
-                if el == top:
-                    break
-                try:
-                    el.extract()
-                except Exception:
-                    continue
+    if remove_before_h1:
+        first_h1 = body.find("h1")
+        if first_h1 is not None:
+            # Find the top-level <body> child that contains this <h1>
+            top = first_h1
+            while top is not None and top.parent is not None and top.parent != body:
+                top = top.parent
+            # If located, remove all siblings before that top-level node
+            if top is not None and top in body.contents:
+                for el in list(body.contents):
+                    if el == top:
+                        break
+                    try:
+                        el.extract()
+                    except Exception:
+                        continue
 
     # extract signposted lines
     lines = extract_signposted_lines_from_body(body, annotate_links=annotate_links)
@@ -344,7 +344,8 @@ if remove_before_h1:
 
 st.set_page_config(page_title="Content Rec Template Tool", page_icon="JAFavicon.png", layout="wide")
 
-st.markdown("""
+st.markdown(
+    """
 <style>
 /* Import a Google Font */
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
@@ -414,14 +415,18 @@ body, h1, h2, h3, p {
 }
 
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 st.title("Content Rec Template Generation Tool")
 
 with st.sidebar:
     st.header("Template & Options")
     tpl_file = st.file_uploader("Upload Template as .DOCX file", type=["docx"])
-    st.caption("This should be your blank template with placeholders (e.g., [PAGE], [DATE], [PAGE BODY CONTENT], etc.).")
+    st.caption(
+        "This should be your blank template with placeholders (e.g., [PAGE], [DATE], [PAGE BODY CONTENT], etc.)."
+    )
 
     st.divider()
     st.subheader("Need a template?")
@@ -430,16 +435,18 @@ with st.sidebar:
             label="Download a Blank Template",
             data=file,
             file_name="blank_template.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
-    st.caption("Once downloaded, you'll still need to upload this above, but this version is a decent starting point.")
+    st.caption(
+        "Once downloaded, you'll still need to upload this above, but this version is a decent starting point."
+    )
 
     st.divider()
     st.subheader("Exclude Selectors")
     exclude_txt = st.text_area(
         "Comma-separated CSS selectors to remove from <body>",
         value=", ".join(DEFAULT_EXCLUDE),
-        height=120
+        height=120,
     )
     exclude_selectors = [s.strip() for s in exclude_txt.split(",") if s.strip()]
 
@@ -468,7 +475,12 @@ with tab1:
             st.error("Please upload your Rec Template.docx in the sidebar first.")
         else:
             try:
-                meta, lines = process_url(url, exclude_selectors, annotate_links=annotate_links, remove_before_h1=remove_before_h1)
+                meta, lines = process_url(
+                    url,
+                    exclude_selectors,
+                    annotate_links=annotate_links,
+                    remove_before_h1=remove_before_h1,
+                )
                 st.success("Extracted successfully.")
                 with st.expander("Meta (preview)", expanded=True):
                     st.write(meta)
@@ -488,7 +500,9 @@ with tab1:
 
 with tab2:
     st.subheader("Batch process CSV")
-    st.caption("Upload a CSV with a header row; required column: url. Optional: out_name.")
+    st.caption(
+        "Upload a CSV with a header row; required column: url. Optional: out_name."
+    )
     batch_file = st.file_uploader("CSV file", type=["csv"], key="csv")
     if st.button("Run batch"):
         if not tpl_file:
@@ -497,7 +511,9 @@ with tab2:
             st.error("Please upload a CSV.")
         else:
             tpl_bytes = tpl_file.read()
-            rows = list(csv.DictReader(io.StringIO(batch_file.getvalue().decode("utf-8"))))
+            rows = list(
+                csv.DictReader(io.StringIO(batch_file.getvalue().decode("utf-8")))
+            )
             if not rows:
                 st.error("CSV appears empty.")
             elif "url" not in rows[0]:
@@ -509,11 +525,21 @@ with tab2:
                 for i, row in enumerate(rows, 1):
                     u = row["url"].strip()
                     try:
-                        meta, lines = process_url(u, exclude_selectors, annotate_links=annotate_links, remove_before_h1=remove_before_h1)
-                        out_name = (row.get("out_name") or f"{meta['page']} - Content Recommendations").strip()
+                        meta, lines = process_url(
+                            u,
+                            exclude_selectors,
+                            annotate_links=annotate_links,
+                            remove_before_h1=remove_before_h1,
+                        )
+                        out_name = (
+                            row.get("out_name")
+                            or f"{meta['page']} - Content Recommendations"
+                        ).strip()
                         out_bytes = build_docx(tpl_bytes, meta, lines)
                         zf.writestr(f"{out_name}.docx", out_bytes)
-                        results.append({"url": u, "status": "ok", "file": f"{out_name}.docx"})
+                        results.append(
+                            {"url": u, "status": "ok", "file": f"{out_name}.docx"}
+                        )
                     except Exception as e:
                         results.append({"url": u, "status": f"error: {e}", "file": ""})
                 zf.close()
