@@ -121,9 +121,15 @@ def extract_signposted_lines_from_body(body: Tag, annotate_links: bool) -> list[
                         sub_txt = extract_text_preserve_breaks(sub_li, annotate_links)
                         if sub_txt.strip():
                             emit_lines("p", sub_txt)
-        for child in tag.children:
-            if isinstance(child, Tag):
-                handle(child)
+        # Capture stray text nodes as paragraphs, then recurse into tags
+for child in tag.children:
+    if isinstance(child, NavigableString):
+        raw = normalise_keep_newlines(str(child))
+        if raw.strip():
+            emit_lines("p", raw)
+    elif isinstance(child, Tag):
+        handle(child)
+
     for child in body.children:
         if isinstance(child, Tag):
             handle(child)
