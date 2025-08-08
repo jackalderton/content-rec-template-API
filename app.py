@@ -28,11 +28,12 @@ DEFAULT_EXCLUDE = [
     "[class*='feefo']",
     "[class*='associated-blogs']",
     "[class*='popular']",
+    ".sr-main.js-searchpage-content.visible",  # new exclusion
 ]
 DATE_TZ = "Europe/London"
 DATE_FMT = "%d/%m/%Y"  # UK format
 
-# Common UI/analytics noise to drop when emitting <p>
+# Common UI/analytics noise we never want to emit as content
 NOISE_SUBSTRINGS = (
     "google tag manager",
     "loading results",
@@ -99,7 +100,7 @@ def annotate_anchor_text(a: Tag, annotate_links: bool) -> str:
 
 
 def extract_text_preserve_breaks(node: Tag | NavigableString, annotate_links: bool) -> str:
-    """Extract visible text; convert <br> to "\n"; handle anchors as one unit."""
+    """Extract visible text; convert <br> to '\n'; handle anchors as one unit."""
     if isinstance(node, NavigableString):
         return str(node)
     parts = []
