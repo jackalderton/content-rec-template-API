@@ -28,7 +28,11 @@ DEFAULT_EXCLUDE = [
     "[class*='feefo']",
     "[class*='associated-blogs']",
     "[class*='popular']",
-    ".sr-main.js-searchpage-content.visible",  # new exclusion
+    # Robust matches for Explore search results container and similar
+    ".sr-main.js-searchpage-content.visible",
+    "[class~='sr-main'][class~='js-searchpage-content'][class~='visible']",
+    "[class*='js-searchpage-content']",
+    "[class*='searchpage-content']",
 ]
 DATE_TZ = "Europe/London"
 DATE_FMT = "%d/%m/%Y"  # UK format
@@ -100,7 +104,7 @@ def annotate_anchor_text(a: Tag, annotate_links: bool) -> str:
 
 
 def extract_text_preserve_breaks(node: Tag | NavigableString, annotate_links: bool) -> str:
-    """Extract visible text; convert <br> to '\n'; handle anchors as one unit."""
+    """Extract visible text; convert <br> to "\n"; handle anchors as one unit."""
     if isinstance(node, NavigableString):
         return str(node)
     parts = []
@@ -327,6 +331,26 @@ def process_url(
         except Exception:
             pass
 
+    # hard-kill: ensure any element with all three classes is removed even if selector order changes
+    try:
+        for el in body.find_all(lambda t: isinstance(t, Tag) and t.has_attr('class') and {'sr-main','js-searchpage-content','visible'}.issubset(set(t.get('class', [])))):
+            el.decompose()
+    except Exception:
+        pass
+
+    # Also explicitly remove via robust CSS selectors (belt-and-braces)
+    for sel in [
+        '.sr-main.js-searchpage-content.visible',
+        "[class~='sr-main'][class~='js-searchpage-content'][class~='visible']",
+        "[class*='js-searchpage-content']",
+        "[class*='searchpage-content']",
+    ]:
+        try:
+            for el in body.select(sel):
+                el.decompose()
+        except Exception:
+            pass
+
     # If requested, remove everything before the first <h1> but keep the rest of body intact
     if remove_before_h1 and body.name == "body":
         first_h1 = body.find("h1")
@@ -410,7 +434,6 @@ body, h1, h2, h3, p {
     border: none;
     font-weight: bold;
     color: #E0E0E0;
-    font-family: 'Montserrat', sans-serif;
 }
 
 /* Button styling */
@@ -422,7 +445,6 @@ body, h1, h2, h3, p {
     border-radius: 8px;
     padding: 10px;
     transition: background-color 0.3s, color 0.3s;
-    font-family: 'Montserrat', sans-serif;
 }
 
 .stButton>button:hover {
