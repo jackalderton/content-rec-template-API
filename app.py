@@ -28,7 +28,7 @@ DEFAULT_EXCLUDE = [
     "[class*='feefo']",
     "[class*='associated-blogs']",
     "[class*='popular']",
-    # Robust matches for Explore search results container and similar
+    # Explore/SPA results containers and variants
     ".sr-main.js-searchpage-content.visible",
     "[class~='sr-main'][class~='js-searchpage-content'][class~='visible']",
     "[class*='js-searchpage-content']",
@@ -37,7 +37,7 @@ DEFAULT_EXCLUDE = [
 DATE_TZ = "Europe/London"
 DATE_FMT = "%d/%m/%Y"  # UK format
 
-# Common UI/analytics noise we never want to emit as content
+# Common UI/analytics noise to drop when emitting <p>
 NOISE_SUBSTRINGS = (
     "google tag manager",
     "loading results",
@@ -85,7 +85,6 @@ def fetch_html(url: str) -> tuple[str, str]:
 def normalise_keep_newlines(s: str) -> str:
     s = s.replace("\r\n", "\n").replace("\r", "\n").replace("\xa0", " ")
     s = re.sub(r"[ \t]+", " ", s)
-    # keep explicit newlines; trim spaces around them
     s = re.sub(r"[ \t]*\n[ \t]*", "\n", s)
     return s
 
@@ -121,50 +120,75 @@ def extract_text_preserve_breaks(node: Tag | NavigableString, annotate_links: bo
     return "".join(parts)
 
 
-def handle(tag: Tag):
-    name = tag.name
-    if name in ALWAYS_STRIP:
-        return
+def extract_signposted_lines_from_body(body: Tag, annotate_links: bool) -> list[str]:
+    """
+    Emit ONLY:
+      - <h1> … <h6> lines
+      - <p> lines
+    Lists flattened to <p>. Critically, <p> is split on <br> and blank lines preserved
+    (blank <p> emitted as '<p>' with no text).
 
-    # Headings: emit once and STOP (avoid duplicate <p> from child text nodes)
-    if name in {"h1", "h2", "h3", "h4", "h5", "h6"}:
-        txt = extract_text_preserve_breaks(tag, annotate_links)
-        if txt.strip():
-            emit_lines(name, txt)
-        return
+    Additionally, capture stray text nodes (bare text in containers) as <p>, but skip
+    comments/doctype/processing instructions and obvious UI/analytics noise.
+    """
+    lines: list[str] = []
 
-    # Paragraphs: emit once and STOP
-    if name == "p":
-        txt = extract_text_preserve_breaks(tag, annotate_links)
-        if txt.strip() or "\n" in txt:
-            emit_lines("p", txt)
-        return
+    def emit_lines(tag_name: str, text: str):
+        text = normalise_keep_newlines(text)
+        segments = text.split("\n")
+        for seg in segments:
+            seg_stripped = seg.strip()
+            if seg_stripped:
+                if tag_name == "p" and is_noise(seg_stripped):
+                    continue
+                lines.append(f"<{tag_name}> {seg_stripped}")
+            else:
+                if tag_name == "p":
+                    lines.append("<p>")
 
-    # Lists: flatten items to <p>, then STOP (we already handled one nested level)
-    if name in {"ul", "ol"}:
-        for li in tag.find_all("li", recursive=False):
-            txt = extract_text_preserve_breaks(li, annotate_links)
+    def handle(tag: Tag):
+        name = tag.name
+        if name in ALWAYS_STRIP:
+            return
+
+        # Headings: emit once and STOP (avoid duplicate <p> from child text nodes)
+        if name in {"h1", "h2", "h3", "h4", "h5", "h6"}:
+            txt = extract_text_preserve_breaks(tag, annotate_links)
             if txt.strip():
+                emit_lines(name, txt)
+            return
+
+        # Paragraphs: emit once and STOP
+        if name == "p":
+            txt = extract_text_preserve_breaks(tag, annotate_links)
+            if txt.strip() or "\n" in txt:
                 emit_lines("p", txt)
-            for sub in li.find_all(["ul", "ol"], recursive=False):
-                for sub_li in sub.find_all("li", recursive=False):
-                    sub_txt = extract_text_preserve_breaks(sub_li, annotate_links)
-                    if sub_txt.strip():
-                        emit_lines("p", sub_txt)
-        return
+            return
 
-    # Generic containers: capture stray text nodes as <p>, THEN recurse into child tags
-    for child in tag.children:
-        if isinstance(child, (Comment, Doctype, ProcessingInstruction)):
-            continue
-        if isinstance(child, NavigableString):
-            raw = normalise_keep_newlines(str(child))
-            if raw.strip() and not is_noise(raw):
-                emit_lines("p", raw)
-        elif isinstance(child, Tag):
-            handle(child)
+        # Lists: flatten items to <p>, then STOP (handle one nested level)
+        if name in {"ul", "ol"}:
+            for li in tag.find_all("li", recursive=False):
+                txt = extract_text_preserve_breaks(li, annotate_links)
+                if txt.strip():
+                    emit_lines("p", txt)
+                for sub in li.find_all(["ul", "ol"], recursive=False):
+                    for sub_li in sub.find_all("li", recursive=False):
+                        sub_txt = extract_text_preserve_breaks(sub_li, annotate_links)
+                        if sub_txt.strip():
+                            emit_lines("p", sub_txt)
+            return
 
-    # Walk top-level children of <body>
+        # Generic containers: capture stray text nodes as <p>, THEN recurse
+        for child in tag.children:
+            if isinstance(child, (Comment, Doctype, ProcessingInstruction)):
+                continue
+            if isinstance(child, NavigableString):
+                raw = normalise_keep_newlines(str(child))
+                if raw.strip() and not is_noise(raw):
+                    emit_lines("p", raw)
+            elif isinstance(child, Tag):
+                handle(child)
+
     for child in body.children:
         if isinstance(child, (Comment, Doctype, ProcessingInstruction)):
             continue
@@ -199,7 +223,6 @@ def iter_paragraphs_and_tables(doc: Document):
 
 
 def replace_placeholders_safe(doc: Document, mapping: dict[str, str]):
-    """Replace placeholders safely: longer keys first to avoid nested/partial clashes."""
     keys = sorted(mapping.keys(), key=len, reverse=True)
     for p in iter_paragraphs_and_tables(doc):
         t = p.text or ""
@@ -210,7 +233,6 @@ def replace_placeholders_safe(doc: Document, mapping: dict[str, str]):
                 t = t.replace(k, v)
                 replaced = True
         if replaced:
-            # collapse runs (ok for placeholders)
             for r in list(p.runs):
                 r.clear()
             p.clear()
@@ -240,7 +262,6 @@ def replace_placeholder_with_lines(doc: Document, placeholder: str, lines: list[
     if not lines:
         target.clear()
         return
-    # first line replaces the placeholder, rest are new paragraphs after
     target.clear()
     target.add_run(lines[0])
     anchor = target
@@ -251,8 +272,6 @@ def replace_placeholder_with_lines(doc: Document, placeholder: str, lines: list[
 def build_docx(template_bytes: bytes, meta: dict, lines: list[str]) -> bytes:
     bio = io.BytesIO(template_bytes)
     doc = Document(bio)
-
-    # Support both bracketed and bare DESCRIPTION tokens
     replace_placeholders_safe(doc, {
         "[PAGE]": meta["page"],
         "[DATE]": meta["date"],
@@ -263,9 +282,7 @@ def build_docx(template_bytes: bytes, meta: dict, lines: list[str]) -> bytes:
         "DESCRIPTION": meta["description"],
         "[DESCRIPTION LENGTH]": str(meta["description_len"]),
     })
-
     replace_placeholder_with_lines(doc, "[PAGE BODY CONTENT]", lines)
-
     out = io.BytesIO()
     doc.save(out)
     out.seek(0)
@@ -338,7 +355,6 @@ def process_url(
             top = first_h1
             while top is not None and top.parent is not None and top.parent != body:
                 top = top.parent
-            # If located, remove all siblings before that top-level node
             if top is not None and top in body.contents:
                 for el in list(body.contents):
                     if el == top:
@@ -381,14 +397,10 @@ st.set_page_config(page_title="Content Rec Template Tool", page_icon="JAFavicon.
 st.markdown(
     """
 <style>
-/* Import a Google Font */
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
 
-body, h1, h2, h3, p {
-    font-family: 'Montserrat', sans-serif;
-}
+body, h1, h2, h3, p { font-family: 'Montserrat', sans-serif; }
 
-/* Main title styling */
 .st-emotion-cache-1j0k826 {
     text-align: center;
     color: #4A90E2;
@@ -398,54 +410,15 @@ body, h1, h2, h3, p {
     font-family: 'Montserrat', sans-serif;
 }
 
-/* Sidebar styling */
-[data-testid="stSidebar"] {
-    background-color: #1a1e24;
-    border-right: 1px solid #4A90E2;
-}
+[data-testid="stSidebar"] { background-color: #1a1e24; border-right: 1px solid #4A90E2; }
+.streamlit-expanderHeader { background-color: #363945; border-radius: 8px; padding: 10px 15px; margin-bottom: 10px; border: none; font-weight: bold; color: #E0E0E0; }
 
-/* Expander styling */
-.streamlit-expanderHeader {
-    background-color: #363945;
-    border-radius: 8px;
-    padding: 10px 15px;
-    margin-bottom: 10px;
-    border: none;
-    font-weight: bold;
-    color: #E0E0E0;
-}
+.stButton>button { width: 100%; background-color: #323640; color: #E0E0E0; border: 1px solid #4A90E2; border-radius: 8px; padding: 10px; transition: background-color 0.3s, color 0.3s; }
+.stButton>button:hover { background-color: #4A90E2; color: white; border-color: white; }
 
-/* Button styling */
-.stButton>button {
-    width: 100%;
-    background-color: #323640;
-    color: #E0E0E0;
-    border: 1px solid #4A90E2;
-    border-radius: 8px;
-    padding: 10px;
-    transition: background-color 0.3s, color 0.3s;
-}
-
-.stButton>button:hover {
-    background-color: #4A90E2;
-    color: white;
-    border-color: white;
-}
-
-/* Tab styling */
-.st-emotion-cache-1cypcdb {
-    background-color: #323640;
-}
-
-.st-emotion-cache-1cypcdb .st-emotion-cache-1q8867a {
-    color: #E0E0E0;
-}
-
-.st-emotion-cache-1cypcdb .st-emotion-cache-1q8867a[data-selected="true"] {
-    color: #4A90E2;
-    border-bottom: 3px solid #4A90E2;
-}
-
+.st-emotion-cache-1cypcdb { background-color: #323640; }
+.st-emotion-cache-1cypcdb .st-emotion-cache-1q8867a { color: #E0E0E0; }
+.st-emotion-cache-1cypcdb .st-emotion-cache-1q8867a[data-selected="true"] { color: #4A90E2; border-bottom: 3px solid #4A90E2; }
 </style>
 """,
     unsafe_allow_html=True,
@@ -456,9 +429,7 @@ st.title("Content Rec Template Generation Tool")
 with st.sidebar:
     st.header("Template & Options")
     tpl_file = st.file_uploader("Upload Template as .DOCX file", type=["docx"])
-    st.caption(
-        "This should be your blank template with placeholders (e.g., [PAGE], [DATE], [PAGE BODY CONTENT], etc.)."
-    )
+    st.caption("This should be your blank template with placeholders (e.g., [PAGE], [DATE], [PAGE BODY CONTENT], etc.).")
 
     st.divider()
     st.subheader("Need a template?")
@@ -469,9 +440,7 @@ with st.sidebar:
             file_name="blank_template.docx",
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
-    st.caption(
-        "Once downloaded, you'll still need to upload this above, but this version is a decent starting point."
-    )
+    st.caption("Once downloaded, you'll still need to upload this above, but this version is a decent starting point.")
 
     st.divider()
     st.subheader("Exclude Selectors")
@@ -485,7 +454,6 @@ with st.sidebar:
     st.subheader("Link formatting")
     annotate_links = st.toggle("Append (→ URL) after anchor text", value=False)
 
-    # New: trim-before-H1 toggle
     remove_before_h1 = st.checkbox("Delete everything before first <h1>", value=False)
 
     st.caption("Timezone fixed to Europe/London; dates in DD/MM/YYYY.")
@@ -532,9 +500,7 @@ with tab1:
 
 with tab2:
     st.subheader("Batch process CSV")
-    st.caption(
-        "Upload a CSV with a header row; required column: url. Optional: out_name."
-    )
+    st.caption("Upload a CSV with a header row; required column: url. Optional: out_name.")
     batch_file = st.file_uploader("CSV file", type=["csv"], key="csv")
     if st.button("Run batch"):
         if not tpl_file:
@@ -543,9 +509,7 @@ with tab2:
             st.error("Please upload a CSV.")
         else:
             tpl_bytes = tpl_file.read()
-            rows = list(
-                csv.DictReader(io.StringIO(batch_file.getvalue().decode("utf-8")))
-            )
+            rows = list(csv.DictReader(io.StringIO(batch_file.getvalue().decode("utf-8"))))
             if not rows:
                 st.error("CSV appears empty.")
             elif "url" not in rows[0]:
@@ -563,15 +527,10 @@ with tab2:
                             annotate_links=annotate_links,
                             remove_before_h1=remove_before_h1,
                         )
-                        out_name = (
-                            row.get("out_name")
-                            or f"{meta['page']} - Content Recommendations"
-                        ).strip()
+                        out_name = (row.get("out_name") or f"{meta['page']} - Content Recommendations").strip()
                         out_bytes = build_docx(tpl_bytes, meta, lines)
                         zf.writestr(f"{out_name}.docx", out_bytes)
-                        results.append(
-                            {"url": u, "status": "ok", "file": f"{out_name}.docx"}
-                        )
+                        results.append({"url": u, "status": "ok", "file": f"{out_name}.docx"})
                     except Exception as e:
                         results.append({"url": u, "status": f"error: {e}", "file": ""})
                 zf.close()
