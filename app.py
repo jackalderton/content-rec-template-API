@@ -35,6 +35,7 @@ DEFAULT_EXCLUDE = [
     "[class~='sr-main'][class~='js-searchpage-content'][class~='visible']",
     "[class*='js-searchpage-content']",
     "[class*='searchpage-content']",
+    ".lmd-map-modal-create.js-lmd-map-modal-map",
 ]
 DATE_TZ = "Europe/London"
 DATE_FMT = "%d/%m/%Y"  # UK format
