@@ -20,7 +20,7 @@ ALWAYS_STRIP = {"script", "style", "noscript", "template"}
 # Inline tags to treat as part of the same paragraph when grouping text
 INLINE_TAGS = {"a","span","strong","em","b","i","u","s","small","sup","sub","mark","abbr","time","code","var","kbd"}
 DEFAULT_EXCLUDE = [
-    "header", "footer", "nav",
+      "header", "footer", "nav",
     ".cookie", ".newsletter",
     "[class*='breadcrumb']",
     "[class*='wishlist']",
