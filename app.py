@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 
 import streamlit as st
 import requests
-from bs4 import BeautifulSoup, Tag, NavigableString
+from bs4 import BeautifulSoup, Tag, NavigableString, Comment, Doctype, ProcessingInstruction
 from docx import Document
 from docx.text.paragraph import Paragraph
 from docx.oxml import OxmlElement
@@ -31,6 +31,21 @@ DEFAULT_EXCLUDE = [
 ]
 DATE_TZ = "Europe/London"
 DATE_FMT = "%d/%m/%Y"  # UK format
+
+# Common UI/analytics noise to drop when emitting <p>
+NOISE_SUBSTRINGS = (
+    "google tag manager",
+    "loading results",
+    "load more",
+    "updating results",
+    "something went wrong",
+    "filters",
+    "apply filters",
+    "clear",
+    "sort by",
+    "to collect end-user usage analytics",
+    "place this code immediately before the closing",
+)
 
 # -------------------------
 # UTILITIES
@@ -70,6 +85,13 @@ def normalise_keep_newlines(s: str) -> str:
     return s
 
 
+def is_noise(text: str) -> bool:
+    t = (text or "").strip().lower()
+    if not t:
+        return False
+    return any(sub in t for sub in NOISE_SUBSTRINGS)
+
+
 def annotate_anchor_text(a: Tag, annotate_links: bool) -> str:
     text = a.get_text(" ", strip=True)
     href = a.get("href", "")
@@ -77,7 +99,7 @@ def annotate_anchor_text(a: Tag, annotate_links: bool) -> str:
 
 
 def extract_text_preserve_breaks(node: Tag | NavigableString, annotate_links: bool) -> str:
-    """Extract visible text; convert <br> to '\n'; handle anchors as one unit."""
+    """Extract visible text; convert <br> to "\n"; handle anchors as one unit."""
     if isinstance(node, NavigableString):
         return str(node)
     parts = []
@@ -102,7 +124,8 @@ def extract_signposted_lines_from_body(body: Tag, annotate_links: bool) -> list[
     Lists flattened to <p>. Critically, <p> is split on <br> and blank lines preserved
     (blank <p> emitted as '<p>' with no text).
 
-    Additionally, capture stray text nodes (bare text in containers) as <p>.
+    Additionally, capture stray text nodes (bare text in containers) as <p>, but skip
+    comments/doctype/processing instructions and obvious UI/analytics noise.
     """
     lines: list[str] = []
 
@@ -112,6 +135,8 @@ def extract_signposted_lines_from_body(body: Tag, annotate_links: bool) -> list[
         for seg in segments:
             seg_stripped = seg.strip()
             if seg_stripped:
+                if tag_name == "p" and is_noise(seg_stripped):
+                    continue
                 lines.append(f"<{tag_name}> {seg_stripped}")
             else:
                 if tag_name == "p":
@@ -146,17 +171,22 @@ def extract_signposted_lines_from_body(body: Tag, annotate_links: bool) -> list[
 
         # Recurse to capture nested text blocks, including stray text nodes
         for child in tag.children:
+            if isinstance(child, (Comment, Doctype, ProcessingInstruction)):
+                continue
             if isinstance(child, NavigableString):
                 raw = normalise_keep_newlines(str(child))
-                if raw.strip():
+                if raw.strip() and not is_noise(raw):
                     emit_lines("p", raw)
             elif isinstance(child, Tag):
                 handle(child)
 
+    # Walk top-level children of <body>
     for child in body.children:
+        if isinstance(child, (Comment, Doctype, ProcessingInstruction)):
+            continue
         if isinstance(child, NavigableString):
             raw = normalise_keep_newlines(str(child))
-            if raw.strip():
+            if raw.strip() and not is_noise(raw):
                 emit_lines("p", raw)
         elif isinstance(child, Tag):
             handle(child)
@@ -282,7 +312,7 @@ def process_url(
     final_url, html = fetch_html(url)
     soup = BeautifulSoup(html, "lxml")
 
-    # global strip
+    # global strip (script/style/noscript/template)
     for el in soup.find_all(list(ALWAYS_STRIP)):
         el.decompose()
 
@@ -297,7 +327,7 @@ def process_url(
             pass
 
     # If requested, remove everything before the first <h1> but keep the rest of body intact
-    if remove_before_h1:
+    if remove_before_h1 and body.name == "body":
         first_h1 = body.find("h1")
         if first_h1 is not None:
             # Find the top-level <body> child that contains this <h1>
@@ -310,7 +340,7 @@ def process_url(
                     if el == top:
                         break
                     try:
-                        el.extract()
+                        el.decompose()
                     except Exception:
                         continue
 
