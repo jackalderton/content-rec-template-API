@@ -20,7 +20,7 @@ ALWAYS_STRIP = {"script", "style", "noscript", "template"}
 # Inline tags to treat as part of the same paragraph when grouping text
 INLINE_TAGS = {"a","span","strong","em","b","i","u","s","small","sup","sub","mark","abbr","time","code","var","kbd"}
 DEFAULT_EXCLUDE = [
-      "header", "footer", "nav",
+    "header", "footer", "nav",
     ".cookie", ".newsletter",
     "[class*='breadcrumb']",
     "[class*='wishlist']",
@@ -35,6 +35,7 @@ DEFAULT_EXCLUDE = [
     "[class~='sr-main'][class~='js-searchpage-content'][class~='visible']",
     "[class*='js-searchpage-content']",
     "[class*='searchpage-content']",
+    # Map modal container to exclude
     ".lmd-map-modal-create.js-lmd-map-modal-map",
 ]
 DATE_TZ = "Europe/London"
@@ -358,6 +359,7 @@ def process_url(
         "[class~='sr-main'][class~='js-searchpage-content'][class~='visible']",
         "[class*='js-searchpage-content']",
         "[class*='searchpage-content']",
+        ".lmd-map-modal-create.js-lmd-map-modal-map",
     ]:
         try:
             for el in body.select(sel):
@@ -472,7 +474,8 @@ with st.sidebar:
     st.subheader("Link formatting")
     annotate_links = st.toggle("Append (→ URL) after anchor text", value=False)
 
-    remove_before_h1 = st.checkbox("Delete everything before first <h1>", value=False)
+    # Toggle instead of checkbox for consistency with Link formatting
+    remove_before_h1 = st.toggle("Delete everything before first <h1>", value=False)
 
     st.caption("Timezone fixed to Europe/London; dates in DD/MM/YYYY.")
 
