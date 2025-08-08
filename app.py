@@ -296,11 +296,18 @@ def process_url(
             pass
 
     # If requested, remove everything before the first <h1> but keep the rest of body intact
-    if remove_before_h1:
-        first_h1 = body.find("h1")
-        if first_h1 is not None:
+if remove_before_h1:
+    first_h1 = body.find("h1")
+    if first_h1 is not None:
+        # Find the top-level <body> child that contains this <h1>
+        top = first_h1
+        while top is not None and top.parent is not None and top.parent != body:
+            top = top.parent
+
+        # If located, remove all siblings before that top-level node
+        if top is not None and top in body.contents:
             for el in list(body.contents):
-                if el == first_h1:
+                if el == top:
                     break
                 try:
                     el.extract()
