@@ -121,69 +121,48 @@ def extract_text_preserve_breaks(node: Tag | NavigableString, annotate_links: bo
     return "".join(parts)
 
 
-def extract_signposted_lines_from_body(body: Tag, annotate_links: bool) -> list[str]:
-    """
-    Emit ONLY:
-      - <h1> … <h6> lines
-      - <p> lines
-    Lists flattened to <p>. Critically, <p> is split on <br> and blank lines preserved
-    (blank <p> emitted as '<p>' with no text).
+def handle(tag: Tag):
+    name = tag.name
+    if name in ALWAYS_STRIP:
+        return
 
-    Additionally, capture stray text nodes (bare text in containers) as <p>, but skip
-    comments/doctype/processing instructions and obvious UI/analytics noise.
-    """
-    lines: list[str] = []
+    # Headings: emit once and STOP (avoid duplicate <p> from child text nodes)
+    if name in {"h1", "h2", "h3", "h4", "h5", "h6"}:
+        txt = extract_text_preserve_breaks(tag, annotate_links)
+        if txt.strip():
+            emit_lines(name, txt)
+        return
 
-    def emit_lines(tag_name: str, text: str):
-        text = normalise_keep_newlines(text)
-        segments = text.split("\n")  # preserve blanks
-        for seg in segments:
-            seg_stripped = seg.strip()
-            if seg_stripped:
-                if tag_name == "p" and is_noise(seg_stripped):
-                    continue
-                lines.append(f"<{tag_name}> {seg_stripped}")
-            else:
-                if tag_name == "p":
-                    lines.append("<p>")  # explicit blank line
+    # Paragraphs: emit once and STOP
+    if name == "p":
+        txt = extract_text_preserve_breaks(tag, annotate_links)
+        if txt.strip() or "\n" in txt:
+            emit_lines("p", txt)
+        return
 
-    def handle(tag: Tag):
-        name = tag.name
-        if name in ALWAYS_STRIP:
-            return
-
-        if name in {"h1", "h2", "h3", "h4", "h5", "h6"}:
-            txt = extract_text_preserve_breaks(tag, annotate_links)
+    # Lists: flatten items to <p>, then STOP (we already handled one nested level)
+    if name in {"ul", "ol"}:
+        for li in tag.find_all("li", recursive=False):
+            txt = extract_text_preserve_breaks(li, annotate_links)
             if txt.strip():
-                emit_lines(name, txt)
-
-        elif name == "p":
-            txt = extract_text_preserve_breaks(tag, annotate_links)
-            if txt.strip() or "\n" in txt:  # allow blank lines from <br><br>
                 emit_lines("p", txt)
+            for sub in li.find_all(["ul", "ol"], recursive=False):
+                for sub_li in sub.find_all("li", recursive=False):
+                    sub_txt = extract_text_preserve_breaks(sub_li, annotate_links)
+                    if sub_txt.strip():
+                        emit_lines("p", sub_txt)
+        return
 
-        elif name in {"ul", "ol"}:
-            for li in tag.find_all("li", recursive=False):
-                txt = extract_text_preserve_breaks(li, annotate_links)
-                if txt.strip():
-                    emit_lines("p", txt)
-                # one nested level
-                for sub in li.find_all(["ul", "ol"], recursive=False):
-                    for sub_li in sub.find_all("li", recursive=False):
-                        sub_txt = extract_text_preserve_breaks(sub_li, annotate_links)
-                        if sub_txt.strip():
-                            emit_lines("p", sub_txt)
-
-        # Recurse to capture nested text blocks, including stray text nodes
-        for child in tag.children:
-            if isinstance(child, (Comment, Doctype, ProcessingInstruction)):
-                continue
-            if isinstance(child, NavigableString):
-                raw = normalise_keep_newlines(str(child))
-                if raw.strip() and not is_noise(raw):
-                    emit_lines("p", raw)
-            elif isinstance(child, Tag):
-                handle(child)
+    # Generic containers: capture stray text nodes as <p>, THEN recurse into child tags
+    for child in tag.children:
+        if isinstance(child, (Comment, Doctype, ProcessingInstruction)):
+            continue
+        if isinstance(child, NavigableString):
+            raw = normalise_keep_newlines(str(child))
+            if raw.strip() and not is_noise(raw):
+                emit_lines("p", raw)
+        elif isinstance(child, Tag):
+            handle(child)
 
     # Walk top-level children of <body>
     for child in body.children:
