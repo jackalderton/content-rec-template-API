@@ -17,6 +17,8 @@ from docx.oxml import OxmlElement
 # CONFIG / CONSTANTS
 # -------------------------
 ALWAYS_STRIP = {"script", "style", "noscript", "template"}
+# Inline tags to treat as part of the same paragraph when grouping text
+INLINE_TAGS = {"a","span","strong","em","b","i","u","s","small","sup","sub","mark","abbr","time","code","var","kbd"}
 DEFAULT_EXCLUDE = [
     "header", "footer", "nav",
     ".cookie", ".newsletter",
@@ -103,7 +105,7 @@ def annotate_anchor_text(a: Tag, annotate_links: bool) -> str:
 
 
 def extract_text_preserve_breaks(node: Tag | NavigableString, annotate_links: bool) -> str:
-    """Extract visible text; convert <br> to "\n"; handle anchors as one unit."""
+    """Extract visible text; convert <br> to \n; handle anchors as one unit."""
     if isinstance(node, NavigableString):
         return str(node)
     parts = []
@@ -158,10 +160,10 @@ def extract_signposted_lines_from_body(body: Tag, annotate_links: bool) -> list[
                 emit_lines(name, txt)
             return
 
-        # Paragraphs: emit once and STOP
+        # Paragraphs: flatten descendants to a single string, emit once and STOP
         if name == "p":
-            txt = extract_text_preserve_breaks(tag, annotate_links)
-            if txt.strip() or "\n" in txt:
+            txt = tag.get_text(" ", strip=True)
+            if txt.strip():
                 emit_lines("p", txt)
             return
 
@@ -178,16 +180,31 @@ def extract_signposted_lines_from_body(body: Tag, annotate_links: bool) -> list[
                             emit_lines("p", sub_txt)
             return
 
-        # Generic containers: capture stray text nodes as <p>, THEN recurse
+        # Generic containers: group contiguous inline content into a single <p>,
+        # and recurse into block-level children so sentences don't split around inline tags
+        buf = []
+        def flush_buf():
+            if not buf:
+                return
+            joined = normalise_keep_newlines("".join(buf))
+            if joined.strip() and not is_noise(joined):
+                emit_lines("p", joined)
+            buf.clear()
+
         for child in tag.children:
             if isinstance(child, (Comment, Doctype, ProcessingInstruction)):
                 continue
             if isinstance(child, NavigableString):
-                raw = normalise_keep_newlines(str(child))
-                if raw.strip() and not is_noise(raw):
-                    emit_lines("p", raw)
+                buf.append(str(child))
             elif isinstance(child, Tag):
-                handle(child)
+                if child.name == "br":
+                    buf.append("\n")
+                elif child.name in INLINE_TAGS:
+                    buf.append(extract_text_preserve_breaks(child, annotate_links))
+                else:
+                    flush_buf()
+                    handle(child)
+        flush_buf()
 
     for child in body.children:
         if isinstance(child, (Comment, Doctype, ProcessingInstruction)):
