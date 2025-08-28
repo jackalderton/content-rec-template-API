@@ -5,6 +5,7 @@ import zipfile
 from datetime import datetime
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
+from pathlib import Path
 
 import streamlit as st
 import requests
@@ -79,12 +80,15 @@ def fallback_page_name_from_url(url: str) -> str:
         pass
     return clean_slug_to_name(parts[-1] if parts else (urlparse(url).hostname or "Page"))
 
-
+@st.cache_data(show_spinner=False, ttl=3600)
 def fetch_html(url: str) -> tuple[str, str]:
-    resp = requests.get(url, timeout=30)
+    resp = requests.get(
+        url,
+        timeout=30,
+        headers={"User-Agent": "Mozilla/5.0 (compatible; ContentRecTool/1.0)"},
+    )
     resp.raise_for_status()
     return resp.url, resp.text
-
 
 def normalise_keep_newlines(s: str) -> str:
     s = s.replace("\r\n", "\n").replace("\r", "\n").replace("\xa0", " ")
@@ -92,19 +96,16 @@ def normalise_keep_newlines(s: str) -> str:
     s = re.sub(r"[ \t]*\n[ \t]*", "\n", s)
     return s
 
-
 def is_noise(text: str) -> bool:
     t = (text or "").strip().lower()
     if not t:
         return False
     return any(sub in t for sub in NOISE_SUBSTRINGS)
 
-
 def annotate_anchor_text(a: Tag, annotate_links: bool) -> str:
     text = a.get_text(" ", strip=True)
     href = a.get("href", "")
     return f"{text} (→ {href})" if (annotate_links and href) else text
-
 
 def extract_text_preserve_breaks(node: Tag | NavigableString, annotate_links: bool) -> str:
     """Extract visible text; convert <br> to \n; handle anchors as one unit."""
@@ -122,7 +123,6 @@ def extract_text_preserve_breaks(node: Tag | NavigableString, annotate_links: bo
             else:
                 parts.append(extract_text_preserve_breaks(child, annotate_links))
     return "".join(parts)
-
 
 def extract_signposted_lines_from_body(body: Tag, annotate_links: bool) -> list[str]:
     """
@@ -226,7 +226,6 @@ def extract_signposted_lines_from_body(body: Tag, annotate_links: bool) -> list[
         prev = ln
     return deduped
 
-
 # -------------------------
 # DOCX helpers
 # -------------------------
@@ -239,7 +238,6 @@ def iter_paragraphs_and_tables(doc: Document):
             for cell in row.cells:
                 for p in cell.paragraphs:
                     yield p
-
 
 def replace_placeholders_safe(doc: Document, mapping: dict[str, str]):
     keys = sorted(mapping.keys(), key=len, reverse=True)
@@ -257,13 +255,11 @@ def replace_placeholders_safe(doc: Document, mapping: dict[str, str]):
             p.clear()
             p.add_run(t)
 
-
 def find_placeholder_paragraph(doc: Document, placeholder: str) -> Paragraph | None:
     for p in iter_paragraphs_and_tables(doc):
         if placeholder in (p.text or ""):
             return p
     return None
-
 
 def insert_paragraph_after(paragraph: Paragraph, text: str = "") -> Paragraph:
     new_p = OxmlElement("w:p")
@@ -272,7 +268,6 @@ def insert_paragraph_after(paragraph: Paragraph, text: str = "") -> Paragraph:
     if text:
         new_para.add_run(text)
     return new_para
-
 
 def replace_placeholder_with_lines(doc: Document, placeholder: str, lines: list[str]):
     target = find_placeholder_paragraph(doc, placeholder)
@@ -286,7 +281,6 @@ def replace_placeholder_with_lines(doc: Document, placeholder: str, lines: list[
     anchor = target
     for line in lines[1:]:
         anchor = insert_paragraph_after(anchor, line)
-
 
 def build_docx(template_bytes: bytes, meta: dict, lines: list[str]) -> bytes:
     bio = io.BytesIO(template_bytes)
@@ -307,7 +301,6 @@ def build_docx(template_bytes: bytes, meta: dict, lines: list[str]) -> bytes:
     out.seek(0)
     return out.read()
 
-
 # -------------------------
 # CORE PROCESS
 # -------------------------
@@ -320,8 +313,9 @@ def first_h1_text(soup: BeautifulSoup) -> str | None:
         return None
     txt = extract_text_preserve_breaks(h1, annotate_links=False)
     txt = normalise_keep_newlines(txt)
+    # collapse to single line to avoid unsafe filenames
+    txt = re.sub(r"\s+", " ", txt)
     return txt.strip() or None
-
 
 def process_url(
     url: str,
@@ -407,44 +401,103 @@ def process_url(
     }
     return meta, lines
 
+# -------------------------
+# FILENAME SAFETY
+# -------------------------
+
+def safe_filename(name: str, maxlen: int = 120) -> str:
+    # collapse any whitespace/newlines to single spaces
+    name = re.sub(r"\s+", " ", name)
+    # remove characters that break downloads
+    name = re.sub(r'[\\/*?:"<>|]+', "", name)
+    # commas are legal but can confuse some agents – make safer
+    name = name.replace(",", "")
+    # trim length and trailing dots/spaces
+    return (name[:maxlen]).rstrip(". ")
 
 # -------------------------
 # STREAMLIT APP
 # -------------------------
 
-st.set_page_config(page_title="Content Rec Template Tool", page_icon="JAFavicon.png", layout="wide")
+icon_path = "JAFavicon.png"
+st.set_page_config(
+    page_title="Content Rec Template Tool",
+    page_icon=icon_path if Path(icon_path).exists() else None,
+    layout="wide",
+)
 
 st.markdown(
     """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
 
-body, h1, h2, h3, p { font-family: 'Montserrat', sans-serif; }
+/* Global font */
+html, body, [data-testid="stAppViewContainer"] * { font-family: 'Montserrat', sans-serif; }
 
-.st-emotion-cache-1j0k826 {
-    text-align: center;
-    color: #4A90E2;
-    font-size: 3em;
-    padding-bottom: 0.5em;
-    border-bottom: 2px solid #4A90E2;
-    font-family: 'Montserrat', sans-serif;
+/* Main title: target first H1 robustly */
+section[tabindex="0"] h1:first-of-type {
+  text-align: center;
+  color: #4A90E2;
+  font-size: 3em;
+  padding-bottom: .5em;
+  border-bottom: 2px solid #4A90E2;
 }
 
-[data-testid="stSidebar"] { background-color: #1a1e24; border-right: 1px solid #4A90E2; }
-.streamlit-expanderHeader { background-color: #363945; border-radius: 8px; padding: 10px 15px; margin-bottom: 10px; border: none; font-weight: bold; color: #E0E0E0; }
+/* Sidebar look + width */
+[data-testid="stSidebar"] {
+  background-color: #1a1e24;
+  border-right: 1px solid #4A90E2;
+  min-width: 320px;
+  max-width: 420px;
+}
 
-.stButton>button { width: 100%; background-color: #323640; color: #E0E0E0; border: 1px solid #4A90E2; border-radius: 8px; padding: 10px; transition: background-color 0.3s, color 0.3s; }
-.stButton>button:hover { background-color: #4A90E2; color: white; border-color: white; }
+/* Expander headers */
+[data-testid="stExpander"] [data-testid="stExpanderHeader"] {
+  background-color: #363945;
+  border-radius: 8px;
+  padding: 10px 15px;
+  margin-bottom: 10px;
+  border: none;
+  font-weight: bold;
+  color: #E0E0E0;
+}
 
-.st-emotion-cache-1cypcdb { background-color: #323640; }
-.st-emotion-cache-1cypcdb .st-emotion-cache-1q8867a { color: #E0E0E0; }
-.st-emotion-cache-1cypcdb .st-emotion-cache-1q8867a[data-selected="true"] { color: #4A90E2; border-bottom: 3px solid #4A90E2; }
+/* Buttons */
+.stButton > button {
+  width: 100%;
+  background-color: #323640;
+  color: #E0E0E0;
+  border: 1px solid #4A90E2;
+  border-radius: 8px;
+  padding: 10px;
+  transition: background-color .3s, color .3s;
+}
+.stButton > button:hover {
+  background-color: #4A90E2;
+  color: #fff;
+  border-color: #fff;
+}
+
+/* Tabs */
+[data-testid="stTabs"] button[role="tab"] { background-color: #323640; color: #E0E0E0; }
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+  color: #4A90E2;
+  box-shadow: inset 0 -3px 0 0 #4A90E2;
+}
 </style>
 """,
     unsafe_allow_html=True,
 )
 
 st.title("Content Rec Template Generation Tool")
+
+# session state for stable downloads across reruns
+if "single_docx" not in st.session_state:
+    st.session_state.single_docx = None
+    st.session_state.single_docx_name = None
+if "batch_zip" not in st.session_state:
+    st.session_state.batch_zip = None
+    st.session_state.batch_zip_name = "content_recommendations.zip"
 
 with st.sidebar:
     st.header("Template & Options")
@@ -479,7 +532,6 @@ with st.sidebar:
 
     st.caption("Timezone fixed to Europe/London; dates in DD/MM/YYYY.")
 
-
 tab1, tab2 = st.tabs(["Single URL", "Batch (CSV)"])
 
 with tab1:
@@ -510,14 +562,22 @@ with tab1:
 
                 if do_doc:
                     out_bytes = build_docx(tpl_file.read(), meta, lines)
-                    st.download_button(
-                        "Download DOCX",
-                        data=out_bytes,
-                        file_name=f"{meta['page']} - Content Recommendations.docx",
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    )
+                    fname = safe_filename(f"{meta['page']} - Content Recommendations") + ".docx"
+                    # store for stable download across reruns
+                    st.session_state.single_docx = out_bytes
+                    st.session_state.single_docx_name = fname
             except Exception as e:
                 st.exception(e)
+
+    # render download button if we have a generated file
+    if st.session_state.single_docx:
+        st.download_button(
+            "Download DOCX",
+            data=st.session_state.single_docx,
+            file_name=st.session_state.single_docx_name,
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            key="dl_single_docx",
+        )
 
 with tab2:
     st.subheader("Batch process CSV")
@@ -548,7 +608,8 @@ with tab2:
                             annotate_links=annotate_links,
                             remove_before_h1=remove_before_h1,
                         )
-                        out_name = (row.get("out_name") or f"{meta['page']} - Content Recommendations").strip()
+                        out_name_raw = (row.get("out_name") or f"{meta['page']} - Content Recommendations").strip()
+                        out_name = safe_filename(out_name_raw)
                         out_bytes = build_docx(tpl_bytes, meta, lines)
                         zf.writestr(f"{out_name}.docx", out_bytes)
                         results.append({"url": u, "status": "ok", "file": f"{out_name}.docx"})
@@ -558,9 +619,16 @@ with tab2:
                 memzip.seek(0)
                 st.success("Batch complete.")
                 st.dataframe(results)
-                st.download_button(
-                    "Download ZIP",
-                    data=memzip.read(),
-                    file_name="content_recommendations.zip",
-                    mime="application/zip",
-                )
+
+                # store for stable download across reruns
+                st.session_state.batch_zip = memzip.read()
+
+    # render batch download if available
+    if st.session_state.batch_zip:
+        st.download_button(
+            "Download ZIP",
+            data=st.session_state.batch_zip,
+            file_name=st.session_state.batch_zip_name,
+            mime="application/zip",
+            key="dl_batch_zip",
+        )
