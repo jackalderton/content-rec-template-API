@@ -1,19 +1,14 @@
 [theme]
-# Primary accent for interactive elements
-primaryColor="#4A90E2"
+primaryColor = "#4A90E2"
+backgroundColor = "#242831"
+secondaryBackgroundColor = "#323640"
+textColor = "#E0E0E0"
+font = "sans serif"
 
-# Background colour for the main content area
-backgroundColor="#242831"
+# ✅ Use polling so Streamlit Cloud doesn't hit the inotify limit
+[server]
+fileWatcherType = "poll"
 
-# Background colour for the sidebar and most widgets
-secondaryBackgroundColor="#323640"
-
-# Colour used for almost all text
-textColor="#E0E0E0"
-
-# Font family for all text in the app
-font="sans serif"
-
-[client]
-# Change the sidebar width
-sidebarWidth="250px"
+# ✅ (Optional) reduce what Streamlit watches for changes
+[global]
+folderWatchBlacklist = ["venv", ".git", ".streamlit", "data", "node_modules"]
