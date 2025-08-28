@@ -81,14 +81,15 @@ def fallback_page_name_from_url(url: str) -> str:
     return clean_slug_to_name(parts[-1] if parts else (urlparse(url).hostname or "Page"))
 
 @st.cache_data(show_spinner=False, ttl=3600)
-def fetch_html(url: str) -> tuple[str, str]:
+def fetch_html(url: str) -> tuple[str, bytes]:
     resp = requests.get(
         url,
         timeout=30,
         headers={"User-Agent": "Mozilla/5.0 (compatible; ContentRecTool/1.0)"},
     )
     resp.raise_for_status()
-    return resp.url, resp.text
+    # Return raw bytes so BeautifulSoup can detect the correct encoding
+    return resp.url, resp.content
 
 def normalise_keep_newlines(s: str) -> str:
     s = s.replace("\r\n", "\n").replace("\r", "\n").replace("\xa0", " ")
@@ -323,8 +324,8 @@ def process_url(
     annotate_links: bool = False,
     remove_before_h1: bool = False,
 ):
-    final_url, html = fetch_html(url)
-    soup = BeautifulSoup(html, "lxml")
+    final_url, html_bytes = fetch_html(url)
+    soup = BeautifulSoup(html_bytes, "lxml")
 
     # global strip (script/style/noscript/template)
     for el in soup.find_all(list(ALWAYS_STRIP)):
