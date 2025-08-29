@@ -545,104 +545,59 @@ def safe_filename(name: str, maxlen: int = 120) -> str:
 # =========================================================
 # STYLES
 # =========================================================
-# Local WOFF2 font: lineto-circular-bold.woff2
+# ---- Use Circular everywhere (local WOFF2) ----
 from base64 import b64encode
 from pathlib import Path
+import streamlit as st
 
 APP_DIR = Path(__file__).resolve().parent
-FONT_CANDIDATES = [
-    APP_DIR / "assets" / "fonts" / "lineto-circular-bold.woff2",
-    APP_DIR / "assets" / "lineto-circular-bold.woff2",
-    APP_DIR / "lineto-circular-bold.woff2",
-]
-font_path = next((p for p in FONT_CANDIDATES if p.exists()), None)
 
-if font_path:
-    font_data = b64encode(font_path.read_bytes()).decode("utf-8")
+# Tell it where your files might live
+CANDIDATES = {
+    400: [  # regular / book
+        APP_DIR / "assets" / "fonts" / "lineto-circular-book.woff2",
+        APP_DIR / "assets" / "fonts" / "CircularStd-Book.woff2",
+        APP_DIR / "assets" / "lineto-circular-book.woff2",
+        APP_DIR / "lineto-circular-book.woff2",
+    ],
+    700: [  # bold
+        APP_DIR / "assets" / "fonts" / "lineto-circular-bold.woff2",
+        APP_DIR / "assets" / "lineto-circular-bold.woff2",
+        APP_DIR / "lineto-circular-bold.woff2",
+    ],
+}
+
+faces_css = []
+have_weight = set()
+
+for weight, paths in CANDIDATES.items():
+    font_path = next((p for p in paths if p.exists()), None)
+    if font_path:
+        data = b64encode(font_path.read_bytes()).decode("utf-8")
+        faces_css.append(f"""
+@font-face {{
+  font-family: 'CircularLocal';
+  src: url(data:font/woff2;charset=utf-8;base64,{data}) format('woff2');
+  font-weight: {weight};
+  font-style: normal;
+  font-display: swap;
+}}
+""")
+        have_weight.add(weight)
+
+if faces_css:
     st.markdown(f"""
-    <style>
-    @font-face {{
-      font-family: 'CircularLocal';
-      src: url(data:font/woff2;charset=utf-8;base64,{font_data}) format('woff2');
-      font-weight: 700;  /* bold cut */
-      font-style: normal;
-      font-display: swap;
-    }}
-
-    /* Use Circular (bold) where it makes sense if you only have bold */
-    h1, h2, h3, h4, h5, h6,
-    [data-testid="stExpander"] [data-testid="stExpanderHeader"],
-    .stButton > button {{
-      font-family: 'CircularLocal', system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
-      font-weight: 700;
-    }}
-    </style>
-    """, unsafe_allow_html=True)
-
-st.markdown(
-    """
 <style>
-
-/* Global font */
-html, body, [data-testid="stAppViewContainer"] * { font-family: 'CircularLocal',"Local Arial',Arial; }
-
-/* Hide Streamlit's Material icon spans to prevent 'keyboard_arrow_down' text overlap */
-[data-testid="stIconMaterial"] { display: none !important; }
-
-/* Main title */
-section[tabindex="0"] h1:first-of-type {
-  text-align: center;
-  color: #4A90E2;
-  font-size: 3em;
-  padding-bottom: .5em;
-  border-bottom: 2px solid #4A90E2;
-}
-
-/* Sidebar look + width */
-[data-testid="stSidebar"] {
-  background-color: #1a1e24;
-  border-right: 1px solid #4A90E2;
-  min-width: 320px;
-  max-width: 420px;
-}
-
-/* Expander headers */
-[data-testid="stExpander"] [data-testid="stExpanderHeader"] {
-  background-color: #363945;
-  border-radius: 8px;
-  padding: 10px 15px;
-  margin-bottom: 10px;
-  border: none;
-  font-weight: bold;
-  color: #E0E0E0;
-}
-
-/* Buttons */
-.stButton > button {
-  width: 100%;
-  background-color: #323640;
-  color: #E0E0E0;
-  border: 1px solid #4A90E2;
-  border-radius: 8px;
-  padding: 10px;
-  transition: background-color .3s, color .3s;
-}
-.stButton > button:hover {
-  background-color: #4A90E2;
-  color: #fff;
-  border-color: #fff;
-}
-
-/* Tabs */
-[data-testid="stTabs"] button[role="tab"] { background-color: #323640; color: #E0E0E0; }
-[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
-  color: #4A90E2;
-  box-shadow: inset 0 -3px 0 0 #4A90E2;
-}
+{''.join(faces_css)}
+/* Make Circular the default across the app (don’t override icon fonts) */
+html, body, [data-testid="stAppViewContainer"] *:not(.material-icons):not(.material-icons-outlined):not(.material-symbols-outlined):not(.material-symbols-rounded):not(.material-symbols-sharp) {{
+  font-family: 'CircularLocal', system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  {"font-weight: 700;" if (400 not in have_weight and 700 in have_weight) else ""}
+}}
 </style>
-""",
-    unsafe_allow_html=True,
-)
+""", unsafe_allow_html=True)
+else:
+    st.info("Add Circular WOFF2 files (book/regular as 400, bold as 700) under assets/fonts/ or assets/.")
 
 # =========================================================
 # APP UI (Single URL only)
