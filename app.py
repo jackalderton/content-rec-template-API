@@ -286,15 +286,18 @@ def replace_placeholder_with_lines(doc: Document, placeholder: str, lines: list[
 def build_docx(template_bytes: bytes, meta: dict, lines: list[str]) -> bytes:
     bio = io.BytesIO(template_bytes)
     doc = Document(bio)
+    # Use .get with defaults so older templates or missing fields don't crash
     replace_placeholders_safe(doc, {
-        "[PAGE]": meta["page"],
-        "[DATE]": meta["date"],
-        "[URL]": meta["url"],
-        "[TITLE]": meta["title"],
-        "[TITLE LENGTH]": str(meta["title_len"]),
-        "[DESCRIPTION]": meta["description"],
-        "DESCRIPTION": meta["description"],
-        "[DESCRIPTION LENGTH]": str(meta["description_len"]),
+        "[PAGE]": meta.get("page", ""),
+        "[DATE]": meta.get("date", ""),
+        "[URL]": meta.get("url", ""),
+        "[TITLE]": meta.get("title", ""),
+        "[TITLE LENGTH]": str(meta.get("title_len", 0)),
+        "[DESCRIPTION]": meta.get("description", ""),
+        "DESCRIPTION": meta.get("description", ""),
+        "[DESCRIPTION LENGTH]": str(meta.get("description_len", 0)),
+        "[AGENCY]": meta.get("agency", ""),
+        "[CLIENT NAME]": meta.get("client_name", ""),
     })
     replace_placeholder_with_lines(doc, "[PAGE BODY CONTENT]", lines)
     out = io.BytesIO()
@@ -399,6 +402,7 @@ def process_url(
         "title_len": len(title) if title != "N/A" else 0,
         "description": description,
         "description_len": len(description) if description != "N/A" else 0,
+        # agency / client will be injected later at call-site for clarity
     }
     return meta, lines
 
@@ -533,11 +537,21 @@ with st.sidebar:
 
     st.caption("Timezone fixed to Europe/London; dates in DD/MM/YYYY.")
 
+# --- Tabs ---
 tab1, tab2 = st.tabs(["Single URL", "Batch (CSV)"])
 
 with tab1:
     st.subheader("Single page")
+
+    # NEW: Agency / Client fields just above the URL field
+    col0a, col0b = st.columns([1, 1])
+    with col0a:
+        agency_name = st.text_input("Agency Name", value="", placeholder="e.g., JA Consulting")
+    with col0b:
+        client_name = st.text_input("Client Name", value="", placeholder="e.g., Workspace")
+
     url = st.text_input("URL", value="https://www.example.com")
+
     col_a, col_b = st.columns([1, 1])
     with col_a:
         do_preview = st.button("Extract preview")
@@ -555,6 +569,10 @@ with tab1:
                     annotate_links=annotate_links,
                     remove_before_h1=remove_before_h1,
                 )
+                # Inject Agency/Client into meta for downstream use
+                meta["agency"] = agency_name.strip()
+                meta["client_name"] = client_name.strip()
+
                 st.success("Extracted successfully.")
                 with st.expander("Meta (preview)", expanded=True):
                     st.write(meta)
@@ -609,6 +627,8 @@ with tab2:
                             annotate_links=annotate_links,
                             remove_before_h1=remove_before_h1,
                         )
+                        # Keep batch behaviour unchanged for now; user can add per-file
+                        # agency/client in the future if needed.
                         out_name_raw = (row.get("out_name") or f"{meta['page']} - Content Recommendations").strip()
                         out_name = safe_filename(out_name_raw)
                         out_bytes = build_docx(tpl_bytes, meta, lines)
