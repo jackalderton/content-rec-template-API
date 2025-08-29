@@ -595,6 +595,24 @@ html, body, [data-testid="stAppViewContainer"] *:not(.material-icons):not(.mater
   {"font-weight: 700;" if (400 not in have_weight and 700 in have_weight) else ""}
 }}
 </style>
+<style>
+/* Main content background only (keeps sidebar styling) */
+[data-testid="stAppViewContainer"] {
+  background-color: #000000;
+}
+[data-testid="stAppViewContainer"] .block-container {
+  background-color: transparent; /* avoid white card behind content */
+}
+
+/* H1s (including the page title) */
+section[tabindex="0"] h1:first-of-type {  /* main page title */
+  color: #537DFC !important;
+}
+h1 { color: #537DFC !important; }
+
+/* H2s (Streamlit st.subheader renders as <h2>) */
+h2 { color: #FA4B41 !important; }
+</style>
 """, unsafe_allow_html=True)
 else:
     st.info("Add Circular WOFF2 files (book/regular as 400, bold as 700) under assets/fonts/ or assets/.")
