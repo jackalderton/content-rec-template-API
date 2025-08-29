@@ -545,13 +545,46 @@ def safe_filename(name: str, maxlen: int = 120) -> str:
 # =========================================================
 # STYLES
 # =========================================================
+# Local WOFF2 font: lineto-circular-bold.woff2
+from base64 import b64encode
+from pathlib import Path
+
+APP_DIR = Path(__file__).resolve().parent
+FONT_CANDIDATES = [
+    APP_DIR / "assets" / "fonts" / "lineto-circular-bold.woff2",
+    APP_DIR / "assets" / "lineto-circular-bold.woff2",
+    APP_DIR / "lineto-circular-bold.woff2",
+]
+font_path = next((p for p in FONT_CANDIDATES if p.exists()), None)
+
+if font_path:
+    font_data = b64encode(font_path.read_bytes()).decode("utf-8")
+    st.markdown(f"""
+    <style>
+    @font-face {{
+      font-family: 'CircularLocal';
+      src: url(data:font/woff2;charset=utf-8;base64,{font_data}) format('woff2');
+      font-weight: 700;  /* bold cut */
+      font-style: normal;
+      font-display: swap;
+    }}
+
+    /* Use Circular (bold) where it makes sense if you only have bold */
+    h1, h2, h3, h4, h5, h6,
+    [data-testid="stExpander"] [data-testid="stExpanderHeader"],
+    .stButton > button {{
+      font-family: 'CircularLocal', system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+      font-weight: 700;
+    }}
+    </style>
+    """, unsafe_allow_html=True)
+
 st.markdown(
     """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
 
 /* Global font */
-html, body, [data-testid="stAppViewContainer"] * { font-family: 'Outfit', sans-serif; }
+html, body, [data-testid="stAppViewContainer"] * { font-family: 'CircularLocal',"Local Arial',Arial; }
 
 /* Hide Streamlit's Material icon spans to prevent 'keyboard_arrow_down' text overlap */
 [data-testid="stIconMaterial"] { display: none !important; }
