@@ -543,24 +543,20 @@ def safe_filename(name: str, maxlen: int = 120) -> str:
     return (name[:maxlen]).rstrip(". ")
 
 # =========================================================
-# STYLES
+# STYLES — Local Circular + colours + background
 # =========================================================
-# ---- Use Circular everywhere (local WOFF2) ----
 from base64 import b64encode
 from pathlib import Path
-import streamlit as st
 
 APP_DIR = Path(__file__).resolve().parent
-
-# Tell it where your files might live
 CANDIDATES = {
-    400: [  # regular / book
+    400: [
         APP_DIR / "assets" / "fonts" / "lineto-circular-book.woff2",
         APP_DIR / "assets" / "fonts" / "CircularStd-Book.woff2",
         APP_DIR / "assets" / "lineto-circular-book.woff2",
         APP_DIR / "lineto-circular-book.woff2",
     ],
-    700: [  # bold
+    700: [
         APP_DIR / "assets" / "fonts" / "lineto-circular-bold.woff2",
         APP_DIR / "assets" / "lineto-circular-bold.woff2",
         APP_DIR / "lineto-circular-bold.woff2",
@@ -569,53 +565,72 @@ CANDIDATES = {
 
 faces_css = []
 have_weight = set()
-
 for weight, paths in CANDIDATES.items():
-    font_path = next((p for p in paths if p.exists()), None)
-    if font_path:
-        data = b64encode(font_path.read_bytes()).decode("utf-8")
-        faces_css.append(f"""
-@font-face {{
-  font-family: 'CircularLocal';
-  src: url(data:font/woff2;charset=utf-8;base64,{data}) format('woff2');
-  font-weight: {weight};
-  font-style: normal;
-  font-display: swap;
-}}
-""")
+    p = next((x for x in paths if x.exists()), None)
+    if p:
+        data = b64encode(p.read_bytes()).decode("utf-8")
+        faces_css.append(
+            "@font-face {\n"
+            "  font-family: 'CircularLocal';\n"
+            f"  src: url(data:font/woff2;charset=utf-8;base64,{data}) format('woff2');\n"
+            f"  font-weight: {weight};\n"
+            "  font-style: normal;\n"
+            "  font-display: swap;\n"
+            "}\n"
+        )
         have_weight.add(weight)
 
+# 1) Inject only the @font-face rules
 if faces_css:
-    st.markdown(f"""
-<style>
-{''.join(faces_css)}
-/* Make Circular the default across the app (don’t override icon fonts) */
-html, body, [data-testid="stAppViewContainer"] *:not(.material-icons):not(.material-icons-outlined):not(.material-symbols-outlined):not(.material-symbols-rounded):not(.material-symbols-sharp) {{
-  font-family: 'CircularLocal', system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
-  {"font-weight: 700;" if (400 not in have_weight and 700 in have_weight) else ""}
-}}
-</style>
-<style>
-/* Main content background only (keeps sidebar styling) */
-[data-testid="stAppViewContainer"] {
-  background-color: #000000;
-}
-[data-testid="stAppViewContainer"] .block-container {
-  background-color: transparent; /* avoid white card behind content */
-}
-
-/* H1s (including the page title) */
-section[tabindex="0"] h1:first-of-type {  /* main page title */
-  color: #537DFC !important;
-}
-h1 { color: #537DFC !important; }
-
-/* H2s (Streamlit st.subheader renders as <h2>) */
-h2 { color: #FA4B41 !important; }
-</style>
-""", unsafe_allow_html=True)
+    st.markdown("<style>\n" + "".join(faces_css) + "</style>", unsafe_allow_html=True)
 else:
-    st.info("Add Circular WOFF2 files (book/regular as 400, bold as 700) under assets/fonts/ or assets/.")
+    st.info("Add Circular WOFF2 (book=400, bold=700) under assets/fonts/ or assets/ to enable local fonts.")
+
+# 2) Theme CSS (plain string; no f-strings so braces are safe)
+force_bold_line = ""
+if 400 not in have_weight and 700 in have_weight:
+    force_bold_line = "  font-weight: 700;\n"
+
+st.markdown(
+    "<style>\n"
+    "/* Make Circular default across the app (don’t override icon ligatures) */\n"
+    "html, body, [data-testid=\"stAppViewContainer\"] *"
+    ":not(.material-icons):not(.material-icons-outlined)"
+    ":not(.material-symbols-outlined):not(.material-symbols-rounded):not(.material-symbols-sharp) {\n"
+    "  font-family: 'CircularLocal', system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;\n"
+    + force_bold_line +
+    "}\n"
+    "\n"
+    "/* Hide Streamlit's Material icon spans to prevent 'keyboard_arrow_down' overlap */\n"
+    "[data-testid=\"stIconMaterial\"] { display: none !important; }\n"
+    "\n"
+    "/* Main content background only (keep sidebar styling) */\n"
+    "[data-testid=\"stAppViewContainer\"] { background-color: #000000; }\n"
+    "[data-testid=\"stAppViewContainer\"] .block-container { background-color: transparent; }\n"
+    "\n"
+    "/* H1 colours (including the main page title) */\n"
+    "section[tabindex=\"0\"] h1:first-of-type { color: #537DFC !important; }\n"
+    "h1 { color: #537DFC !important; }\n"
+    "\n"
+    "/* H2 colours */\n"
+    "h2 { color: #FA4B41 !important; }\n"
+    "\n"
+    "/* Sidebar look + width */\n"
+    "[data-testid=\"stSidebar\"] { background-color: #1a1e24; border-right: 1px solid #4A90E2; min-width: 320px; max-width: 420px; }\n"
+    "\n"
+    "/* Expander headers */\n"
+    "[data-testid=\"stExpander\"] [data-testid=\"stExpanderHeader\"] { background-color: #363945; border-radius: 8px; padding: 10px 15px; margin-bottom: 10px; border: none; font-weight: bold; color: #E0E0E0; }\n"
+    "\n"
+    "/* Buttons */\n"
+    ".stButton > button { width: 100%; background-color: #323640; color: #E0E0E0; border: 1px solid #4A90E2; border-radius: 8px; padding: 10px; transition: background-color .3s, color .3s; }\n"
+    ".stButton > button:hover { background-color: #4A90E2; color: #fff; border-color: #fff; }\n"
+    "\n"
+    "/* Tabs */\n"
+    "[data-testid=\"stTabs\"] button[role=\"tab\"] { background-color: #323640; color: #E0E0E0; }\n"
+    "[data-testid=\"stTabs\"] button[role=\"tab\"][aria-selected=\"true\"] { color: #4A90E2; box-shadow: inset 0 -3px 0 0 #4A90E2; }\n"
+    "</style>\n",
+    unsafe_allow_html=True,
+)
 
 # =========================================================
 # APP UI (Single URL only)
