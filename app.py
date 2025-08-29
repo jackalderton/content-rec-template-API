@@ -613,7 +613,7 @@ st.markdown(
     "h1 { color: #537DFC !important; }\n"
     "\n"
     "/* H2 colours */\n"
-    "h2 { color: #FA4B41 !important; }\n"
+    "h2 h3  { color: #FA4B41 !important; }\n"
     "\n"
     "/* Sidebar look + width */\n"
     "[data-testid=\"stSidebar\"] { background-color: #1a1e24; border-right: 1px solid #4A90E2; min-width: 320px; max-width: 420px; }\n"
