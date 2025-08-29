@@ -645,7 +645,7 @@ with st.sidebar:
     st.caption("This should be your blank template with placeholders (e.g., [PAGE], [DATE], [PAGE BODY CONTENT], [SCHEMA], etc.).")
 
     st.divider()
-    st.subheader("Need a template?")
+    st.header("Need a template?")
     TEMPLATE_CANDIDATES = [APP_DIR / "assets" / "blank_template.docx", APP_DIR / "blank_template.docx"]
     template_path = next((p for p in TEMPLATE_CANDIDATES if p.exists()), None)
     if template_path:
@@ -661,7 +661,7 @@ with st.sidebar:
     st.caption("Once downloaded, you'll still need to upload your template above.")
 
     st.divider()
-    st.subheader("Exclude Selectors")
+    st.header("Exclude Selectors")
     exclude_txt = st.text_area(
         "Comma-separated CSS selectors to remove from <body>",
         value=", ".join(DEFAULT_EXCLUDE),
@@ -669,7 +669,8 @@ with st.sidebar:
     )
     exclude_selectors = [s.strip() for s in exclude_txt.split(",") if s.strip()]
 
-    st.subheader("Extra Settings")
+    st.divider()
+    st.header("Extra Settings")
     annotate_links = st.toggle("Append (→ URL) after anchor text", value=False)
 
     remove_before_h1 = st.toggle("Delete everything before first <h1>", value=False)
