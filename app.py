@@ -548,10 +548,10 @@ def safe_filename(name: str, maxlen: int = 120) -> str:
 st.markdown(
     """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
 
 /* Global font */
-html, body, [data-testid="stAppViewContainer"] * { font-family: 'Montserrat', sans-serif; }
+html, body, [data-testid="stAppViewContainer"] * { font-family: 'Outfit', sans-serif; }
 
 /* Hide Streamlit's Material icon spans to prevent 'keyboard_arrow_down' text overlap */
 [data-testid="stIconMaterial"] { display: none !important; }
