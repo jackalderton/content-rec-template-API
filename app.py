@@ -546,7 +546,7 @@ with tab1:
     # NEW: Agency / Client fields just above the URL field
     col0a, col0b = st.columns([1, 1])
     with col0a:
-        agency_name = st.text_input("Agency Name", value="", placeholder="e.g., JA Consulting")
+        agency_name = st.text_input("Agency or Practitioner Name", value="", placeholder="e.g., Jack Alderton")
     with col0b:
         client_name = st.text_input("Client Name", value="", placeholder="e.g., Workspace")
 
