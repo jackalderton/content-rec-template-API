@@ -125,12 +125,18 @@ def extract_text_preserve_breaks(node: Tag | NavigableString, annotate_links: bo
                 parts.append(extract_text_preserve_breaks(child, annotate_links))
     return "".join(parts)
 
-def extract_signposted_lines_from_body(body: Tag, annotate_links: bool) -> list[str]:
+# -------------------------
+# CORE EXTRACTION
+# -------------------------
+
+def extract_signposted_lines_from_body(body: Tag, annotate_links: bool, include_img_src: bool = False) -> list[str]:
     """
     Emit ONLY:
       - <h1> … <h6> lines
       - <p> lines
-    Lists flattened to <p>. Critically, <p> is split on <br> and blank lines preserved
+      - <img alt="…"> (or <img alt="…" src="…"> when enabled) for every <img> encountered
+
+    Lists are flattened to <p>. Critically, <p> is split on <br> and blank lines preserved
     (blank <p> emitted as '<p>' with no text).
 
     Additionally, capture stray text nodes (bare text in containers) as <p>, but skip
@@ -151,6 +157,17 @@ def extract_signposted_lines_from_body(body: Tag, annotate_links: bool) -> list[
                 if tag_name == "p":
                     lines.append("<p>")
 
+    def emit_img(img_tag: Tag):
+        if not isinstance(img_tag, Tag) or img_tag.name != "img":
+            return
+        alt = (img_tag.get("alt") or "").strip().replace('"', '\\"')
+        if include_img_src:
+            src = (img_tag.get("src") or "").strip().replace('"', '\\"')
+            if src:
+                lines.append(f'<img alt="{alt}" src="{src}">')
+                return
+        lines.append(f'<img alt="{alt}">')
+
     def handle(tag: Tag):
         name = tag.name
         if name in ALWAYS_STRIP:
@@ -168,6 +185,9 @@ def extract_signposted_lines_from_body(body: Tag, annotate_links: bool) -> list[
             txt = tag.get_text(" ", strip=True)
             if txt.strip():
                 emit_lines("p", txt)
+            # Also surface any images inside the paragraph
+            for img in tag.find_all("img"):
+                emit_img(img)
             return
 
         # Lists: flatten items to <p>, then STOP (handle one nested level)
@@ -176,11 +196,16 @@ def extract_signposted_lines_from_body(body: Tag, annotate_links: bool) -> list[
                 txt = extract_text_preserve_breaks(li, annotate_links)
                 if txt.strip():
                     emit_lines("p", txt)
+                # Emit any images inside the list item
+                for img in li.find_all("img"):
+                    emit_img(img)
                 for sub in li.find_all(["ul", "ol"], recursive=False):
                     for sub_li in sub.find_all("li", recursive=False):
                         sub_txt = extract_text_preserve_breaks(sub_li, annotate_links)
                         if sub_txt.strip():
                             emit_lines("p", sub_txt)
+                        for img in sub_li.find_all("img"):
+                            emit_img(img)
             return
 
         # Generic containers: group contiguous inline content into a single <p>,
@@ -202,6 +227,10 @@ def extract_signposted_lines_from_body(body: Tag, annotate_links: bool) -> list[
             elif isinstance(child, Tag):
                 if child.name == "br":
                     buf.append("\n")
+                elif child.name == "img":
+                    # Flush text seen so far, then emit the image alt/src
+                    flush_buf()
+                    emit_img(child)
                 elif child.name in INLINE_TAGS:
                     buf.append(extract_text_preserve_breaks(child, annotate_links))
                 else:
@@ -217,7 +246,10 @@ def extract_signposted_lines_from_body(body: Tag, annotate_links: bool) -> list[
             if raw.strip() and not is_noise(raw):
                 emit_lines("p", raw)
         elif isinstance(child, Tag):
-            handle(child)
+            if child.name == "img":
+                emit_img(child)
+            else:
+                handle(child)
 
     # Deduplicate trivial adjacent repeats
     deduped, prev = [], None
@@ -326,6 +358,7 @@ def process_url(
     exclude_selectors: list[str],
     annotate_links: bool = False,
     remove_before_h1: bool = False,
+    include_img_src: bool = False,
 ):
     final_url, html_bytes = fetch_html(url)
     soup = BeautifulSoup(html_bytes, "lxml")
@@ -383,7 +416,7 @@ def process_url(
                         continue
 
     # extract signposted lines
-    lines = extract_signposted_lines_from_body(body, annotate_links=annotate_links)
+    lines = extract_signposted_lines_from_body(body, annotate_links=annotate_links, include_img_src=include_img_src)
 
     # meta
     head = soup.head or soup
@@ -402,7 +435,7 @@ def process_url(
         "title_len": len(title) if title != "N/A" else 0,
         "description": description,
         "description_len": len(description) if description != "N/A" else 0,
-        # agency / client will be injected later at call-site for clarity
+        # agency / client injected at call-site
     }
     return meta, lines
 
@@ -490,9 +523,8 @@ section[tabindex="0"] h1:first-of-type {
   box-shadow: inset 0 -3px 0 0 #4A90E2;
 }
 </style>
-""",
-    unsafe_allow_html=True,
-)
+"""
+, unsafe_allow_html=True)
 
 st.title("Content Rec Template Generation Tool")
 
@@ -535,6 +567,9 @@ with st.sidebar:
     # Toggle instead of checkbox for consistency with Link formatting
     remove_before_h1 = st.toggle("Delete everything before first <h1>", value=False)
 
+    # NEW: include <img> src alongside alt text
+    include_img_src = st.toggle("Include <img> src in output", value=False)
+
     st.caption("Timezone fixed to Europe/London; dates in DD/MM/YYYY.")
 
 # --- Tabs ---
@@ -543,10 +578,10 @@ tab1, tab2 = st.tabs(["Single URL", "Batch (CSV)"])
 with tab1:
     st.subheader("Single page")
 
-    # NEW: Agency / Client fields just above the URL field
+    # Agency / Client fields just above the URL field
     col0a, col0b = st.columns([1, 1])
     with col0a:
-        agency_name = st.text_input("Agency or Practitioner Name", value="", placeholder="e.g., Jack Alderton")
+        agency_name = st.text_input("Agency Name", value="", placeholder="e.g., JA Consulting")
     with col0b:
         client_name = st.text_input("Client Name", value="", placeholder="e.g., Workspace")
 
@@ -568,6 +603,7 @@ with tab1:
                     exclude_selectors,
                     annotate_links=annotate_links,
                     remove_before_h1=remove_before_h1,
+                    include_img_src=include_img_src,
                 )
                 # Inject Agency/Client into meta for downstream use
                 meta["agency"] = agency_name.strip()
@@ -626,6 +662,7 @@ with tab2:
                             exclude_selectors,
                             annotate_links=annotate_links,
                             remove_before_h1=remove_before_h1,
+                            include_img_src=include_img_src,
                         )
                         # Keep batch behaviour unchanged for now; user can add per-file
                         # agency/client in the future if needed.
