@@ -685,11 +685,11 @@ st.subheader("Page Details")
 # Agency / Client fields just above the URL field
 col0a, col0b = st.columns([1, 1])
 with col0a:
-    client_name = st.text_input("Client Name", value="", placeholder="e.g., 'LeShuttle'")
+    client_name = st.text_input("Client Name", value="", placeholder="e.g., LeShuttle")
 with col0b:
-    agency_name = st.text_input("Agency/Practitioner Name", value="", placeholder="e.g., 'Crafted'")
+    agency_name = st.text_input("Agency/Practitioner Name", value="", placeholder="e.g., Crafted")
 
-url = st.text_input("URL", value="", placeholder="www.example.com")
+url = st.text_input("URL", value="", placeholder="e.g., hhtps://www.example.com")
 
 col_a, col_b = st.columns([1, 1])
 with col_a:
