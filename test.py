@@ -1,5 +1,5 @@
-from content_rec_template.core.extract import process_url
-from content_rec_template.core.types import ExtractOptions
+from core.extract import process_url
+from core.types import ExtractOptions
 
 # Configure extraction options
 opts = ExtractOptions(exclude_selectors=[])
