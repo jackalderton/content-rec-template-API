@@ -20,5 +20,10 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 # copy the app and assets (favicon/fonts/templates)
 COPY . .
 
+# Put your Streamlit config into the image and point STREAMLIT to it
+RUN mkdir -p /app/.streamlit
+COPY .streamlit/config.toml /app/.streamlit/config.toml
+ENV STREAMLIT_CONFIG=/app/.streamlit/config.toml
+
 EXPOSE 8501
 CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
