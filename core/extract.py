@@ -257,3 +257,64 @@ def process_url(url: str, opts: ExtractOptions):
         "description_len": len(description) if description != "N/A" else 0,
     }
     return meta, lines
+import json
+from bs4 import BeautifulSoup, Tag
+
+from .utils import normalise_keep_newlines, is_noise, fallback_page_name_from_url, uk_today_str
+
+def extract_schema(soup: BeautifulSoup) -> str:
+    """
+    Look for <script type="application/ld+json"> blocks and return them as a string.
+    Joins multiple blocks if needed.
+    """
+    scripts = soup.find_all("script", attrs={"type": "application/ld+json"})
+    schemas = []
+    for s in scripts:
+        try:
+            data = json.loads(s.string)
+            schemas.append(json.dumps(data, indent=2))
+        except Exception:
+            continue
+    return "\n\n".join(schemas) if schemas else "No JSON-LD schema found."
+
+def process_url(
+    url: str,
+    exclude_selectors: list[str],
+    annotate_links: bool = False,
+    remove_before_h1: bool = False,
+    include_img_src: bool = False,
+):
+    # --- existing logic (clean body, extract lines etc) ---
+    from bs4 import BeautifulSoup
+    import requests
+
+    resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=20)
+    resp.raise_for_status()
+    soup = BeautifulSoup(resp.content, "lxml")
+
+    # (strip tags, apply excludes, extract content, etc.)
+    # Imagine this calls your existing extraction functions
+
+    # Title + description
+    head = soup.head or soup
+    title = head.title.string.strip() if (head and head.title and head.title.string) else "N/A"
+    meta_el = head.find("meta", attrs={"name": "description"}) if head else None
+    description = meta_el.get("content").strip() if (meta_el and meta_el.get("content")) else "N/A"
+
+    # Schema
+    schema = extract_schema(soup)
+
+    # Meta output
+    meta = {
+        "page": fallback_page_name_from_url(url),
+        "date": uk_today_str(),
+        "url": url,
+        "title": title,
+        "title_len": len(title) if title != "N/A" else 0,
+        "description": description,
+        "description_len": len(description) if description != "N/A" else 0,
+        "schema": schema,   # NEW
+    }
+
+    # For now, return meta + dummy lines until we wire in full body extraction
+    return meta, ["<p> Example body content extracted here... </p>"]
