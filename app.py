@@ -71,7 +71,7 @@ class ExtractOptions:
 Meta = Dict[str, str]
 
 # =========================================================
-# UTILITIES
+# UTILITIES (keep only those needed by the UI, no fetch_html here)
 # =========================================================
 
 def uk_today_str() -> str:
@@ -90,15 +90,6 @@ def fallback_page_name_from_url(url: str) -> str:
     except ValueError:
         pass
     return clean_slug_to_name(parts[-1] if parts else (urlparse(url).hostname or "Page"))
-
-def fetch_html(url: str) -> tuple[str, bytes]:
-    resp = requests.get(
-        url,
-        timeout=30,
-        headers={"User-Agent": "Mozilla/5.0 (compatible; ContentRecTool/1.0)"}
-    )
-    resp.raise_for_status()
-    return resp.url, resp.content
 
 def normalise_keep_newlines(s: str) -> str:
     s = s.replace("\r\n", "\n").replace("\r", "\n").replace("\xa0", " ")
