@@ -1,4 +1,6 @@
 import re
+import json
+import requests
 from bs4 import BeautifulSoup, FeatureNotFound
 from bs4.element import Tag, NavigableString, Comment, Doctype, ProcessingInstruction
 
@@ -13,13 +15,17 @@ from .utils import (
 )
 from .types import ExtractOptions
 
+
+# -------------------------
+# Helpers
+# -------------------------
+
 def annotate_anchor_text(a: Tag, annotate_links: bool) -> str:
     text = a.get_text(" ", strip=True)
     href = a.get("href", "")
     return f"{text} (→ {href})" if (annotate_links and href) else text
 
 def extract_text_preserve_breaks(node: Tag | NavigableString, annotate_links: bool) -> str:
-    """Extract visible text; convert <br> to \\n; handle anchors as one unit."""
     if isinstance(node, NavigableString):
         return str(node)
     parts = []
@@ -36,18 +42,6 @@ def extract_text_preserve_breaks(node: Tag | NavigableString, annotate_links: bo
     return "".join(parts)
 
 def extract_signposted_lines_from_body(body: Tag, annotate_links: bool, include_img_src: bool = False) -> list[str]:
-    """
-    Emit ONLY:
-      - <h1> … <h6> lines
-      - <p> lines
-      - <img alt="…"> (or <img alt="…" src="…"> when enabled) for every <img> encountered
-
-    Lists are flattened to <p>. Critically, <p> is split on <br> and blank lines preserved
-    (blank <p> emitted as '<p>' with no text).
-
-    Additionally, capture stray text nodes (bare text in containers) as <p>, but skip
-    comments/doctype/processing instructions and obvious UI/analytics noise.
-    """
     lines: list[str] = []
 
     def emit_lines(tag_name: str, text: str):
@@ -172,21 +166,36 @@ def first_h1_text(soup: BeautifulSoup) -> str | None:
     txt = re.sub(r"\s+", " ", txt)
     return txt.strip() or None
 
+def extract_schema(soup: BeautifulSoup) -> str:
+    """Find JSON-LD <script> blocks and pretty-print them."""
+    scripts = soup.find_all("script", attrs={"type": "application/ld+json"})
+    schemas = []
+    for s in scripts:
+        try:
+            data = json.loads(s.string)
+            schemas.append(json.dumps(data, indent=2))
+        except Exception:
+            continue
+    return "\n\n".join(schemas) if schemas else "No JSON-LD schema found."
+
+# -------------------------
+# Main entry
+# -------------------------
+
 def process_url(url: str, opts: ExtractOptions):
     final_url, html_bytes = fetch_html(url)
-    # Prefer lxml but gracefully fall back if unavailable
     try:
         soup = BeautifulSoup(html_bytes, "lxml")
     except FeatureNotFound:
         soup = BeautifulSoup(html_bytes, "html.parser")
 
-    # global strip (script/style/noscript/template)
+    # global strip
     for el in soup.find_all(list(ALWAYS_STRIP)):
         el.decompose()
 
     body = soup.body or soup
 
-    # exclude universal blocks
+    # exclude selectors
     for sel in opts.exclude_selectors:
         try:
             for el in body.select(sel):
@@ -194,14 +203,14 @@ def process_url(url: str, opts: ExtractOptions):
         except Exception:
             pass
 
-    # hard-kill: ensure any element with all three classes is removed even if selector order changes
+    # hard-kill (class subsets)
     try:
         for el in body.find_all(lambda t: isinstance(t, Tag) and t.has_attr('class') and {'sr-main','js-searchpage-content','visible'}.issubset(set(t.get('class', [])))):
             el.decompose()
     except Exception:
         pass
 
-    # Also explicitly remove via robust CSS selectors (belt-and-braces)
+    # extra selectors
     for sel in [
         '.sr-main.js-searchpage-content.visible',
         "[class~='sr-main'][class~='js-searchpage-content'][class~='visible']",
@@ -215,7 +224,7 @@ def process_url(url: str, opts: ExtractOptions):
         except Exception:
             pass
 
-    # If requested, remove everything before the first <h1> but keep the rest of body intact
+    # optional: remove before first h1
     if opts.remove_before_h1 and body.name == "body":
         first_h1 = body.find("h1")
         if first_h1 is not None:
@@ -231,7 +240,7 @@ def process_url(url: str, opts: ExtractOptions):
                     except Exception:
                         continue
 
-    # extract signposted lines
+    # lines
     lines = extract_signposted_lines_from_body(
         body,
         annotate_links=opts.annotate_links,
@@ -244,7 +253,6 @@ def process_url(url: str, opts: ExtractOptions):
     meta_el = head.find("meta", attrs={"name": "description"}) if head else None
     description = meta_el.get("content").strip() if (meta_el and meta_el.get("content")) else "N/A"
 
-    # page name: prefer H1
     page_name = first_h1_text(soup) or fallback_page_name_from_url(final_url)
 
     meta = {
@@ -255,66 +263,6 @@ def process_url(url: str, opts: ExtractOptions):
         "title_len": len(title) if title != "N/A" else 0,
         "description": description,
         "description_len": len(description) if description != "N/A" else 0,
+        "schema": extract_schema(soup),   # NEW
     }
     return meta, lines
-import json
-from bs4 import BeautifulSoup, Tag
-
-from .utils import normalise_keep_newlines, is_noise, fallback_page_name_from_url, uk_today_str
-
-def extract_schema(soup: BeautifulSoup) -> str:
-    """
-    Look for <script type="application/ld+json"> blocks and return them as a string.
-    Joins multiple blocks if needed.
-    """
-    scripts = soup.find_all("script", attrs={"type": "application/ld+json"})
-    schemas = []
-    for s in scripts:
-        try:
-            data = json.loads(s.string)
-            schemas.append(json.dumps(data, indent=2))
-        except Exception:
-            continue
-    return "\n\n".join(schemas) if schemas else "No JSON-LD schema found."
-
-def process_url(
-    url: str,
-    exclude_selectors: list[str],
-    annotate_links: bool = False,
-    remove_before_h1: bool = False,
-    include_img_src: bool = False,
-):
-    # --- existing logic (clean body, extract lines etc) ---
-    from bs4 import BeautifulSoup
-    import requests
-
-    resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=20)
-    resp.raise_for_status()
-    soup = BeautifulSoup(resp.content, "lxml")
-
-    # (strip tags, apply excludes, extract content, etc.)
-    # Imagine this calls your existing extraction functions
-
-    # Title + description
-    head = soup.head or soup
-    title = head.title.string.strip() if (head and head.title and head.title.string) else "N/A"
-    meta_el = head.find("meta", attrs={"name": "description"}) if head else None
-    description = meta_el.get("content").strip() if (meta_el and meta_el.get("content")) else "N/A"
-
-    # Schema
-    schema = extract_schema(soup)
-
-    # Meta output
-    meta = {
-        "page": fallback_page_name_from_url(url),
-        "date": uk_today_str(),
-        "url": url,
-        "title": title,
-        "title_len": len(title) if title != "N/A" else 0,
-        "description": description,
-        "description_len": len(description) if description != "N/A" else 0,
-        "schema": schema,   # NEW
-    }
-
-    # For now, return meta + dummy lines until we wire in full body extraction
-    return meta, ["<p> Example body content extracted here... </p>"]
