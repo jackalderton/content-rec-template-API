@@ -15,6 +15,16 @@ from .utils import (
 )
 from .types import ExtractOptions
 
+from dataclasses import dataclass
+from typing import Dict
+
+@dataclass
+class ExtractOptions:
+    exclude_selectors: list[str]
+    annotate_links: bool = False
+    remove_before_h1: bool = False
+    include_img_src: bool = False
+
 
 # -------------------------
 # Helpers
